@@ -1,9 +1,10 @@
 #include "../../include/core/fifo_strategy.h"
 #include <chrono>
+#include <algorithm>
 
 std::vector<Event> FIFOStrategy::match(
         const SystemProtocol& newOrder,
-        std::map<uint64_t, std::deque<SystemProtocol>>& bids,
+        std::map<uint64_t, std::deque<SystemProtocol>, std::greater<uint64_t>>& bids,
         std::map<uint64_t, std::deque<SystemProtocol>>& asks
     ) {
     
@@ -18,16 +19,16 @@ std::vector<Event> FIFOStrategy::match(
 
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
-                SystemProtocol& restingOrder = priceLevelQueue.front();
-                int minVal = std::min(order.quantity, restingOrder.quantity);
+                SystemProtocol& cur = priceLevelQueue.front();
+                int minVal = std::min(order.quantity, cur.quantity);
                 order.quantity -= minVal;
-                restingOrder.quantity -= minVal;
+                cur.quantity -= minVal;
                 
                 uint64_t now = std::chrono::system_clock::now().time_since_epoch().count();
                 events.push_back({now, static_cast<uint8_t>(EventType::COMPLETED)});
                 events.push_back({now, static_cast<uint8_t>(EventType::COMPLETED)});
 
-                if (restingOrder.quantity == 0) {
+                if (cur.quantity == 0) {
                     priceLevelQueue.pop_front();
                 }
             }
@@ -49,17 +50,17 @@ std::vector<Event> FIFOStrategy::match(
 
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
-                SystemProtocol& restingOrder = priceLevelQueue.front();
-                int minVal = std::min(order.quantity, restingOrder.quantity);
+                SystemProtocol& cur = priceLevelQueue.front();
+                int minVal = std::min(order.quantity, cur.quantity);
 
                 order.quantity -= minVal;
-                restingOrder.quantity -= minVal;
+                cur.quantity -= minVal;
 
                 uint64_t now = std::chrono::system_clock::now().time_since_epoch().count();
                 events.push_back({now, static_cast<uint8_t>(EventType::COMPLETED)});
                 events.push_back({now, static_cast<uint8_t>(EventType::COMPLETED)});
 
-                if (restingOrder.quantity == 0) {
+                if (cur.quantity == 0) {
                     priceLevelQueue.pop_front();
                 }
             }

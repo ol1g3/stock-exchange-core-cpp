@@ -1,13 +1,10 @@
-#include "../../include/services/service_interface.h"
 #include "../../include/services/order_entry_gateway.h"
-#include "../../include/core/order_book.h"
+#include "../../include/common/message.h"
 
-OrderEntryGateway* OrderEntryGateway::instance = nullptr;
-OrderEntryGateway::OrderEntryGateway() : running(false), orderBookPool() {}
-OrderEntryGateway::OrderEntryGateway(OrderBookPool orderBookPool) : running(false), orderBookPool(orderBookPool) {}
+OrderEntryGateway::OrderEntryGateway(OrderBookPool& pool) 
+    : running(false), orderBookPool(pool) {}
 
 ServiceType OrderEntryGateway::initialize() {
-    if (instance == nullptr) instance = new OrderEntryGateway(orderBookPool);
     return ServiceType::OrderEntryGateway;
 }
 
@@ -25,19 +22,17 @@ bool OrderEntryGateway::isRunning() {
     return running;
 }
 
+bool OrderEntryGateway::acceptOrder(const ClientProtocol& message){
+    SystemProtocol systemMessage = translate(message);
+    return this->forward(systemMessage);
+}
+
 bool OrderEntryGateway::forward(const SystemProtocol& message) {
     OrderBook* dest = orderBookPool.get(0);
-    if (dest == NULL) return false;
-    return (*dest).process(message);
+    if (dest == nullptr) return false;
+    return dest->process(message);
 }
 
 ServiceType OrderEntryGateway::getType() const {
     return ServiceType::OrderEntryGateway;
-}
-
-OrderEntryGateway* OrderEntryGateway::getInstance() {
-    if (instance == nullptr) {
-        instance = new OrderEntryGateway();
-    }
-    return instance;
 }

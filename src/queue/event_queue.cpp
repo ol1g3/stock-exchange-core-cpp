@@ -7,6 +7,10 @@ bool EventQueue::push(const Event& event) {
     return true;
 }
 
+void EventQueue::addConsumer(std::unique_ptr<ServiceInterface> consumer) {
+    consumers.push_back(std::move(consumer));
+}
+
 Event EventQueue::poll() {
     if (queue.empty()) {
         return Event();

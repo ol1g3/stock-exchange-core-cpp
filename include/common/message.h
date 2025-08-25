@@ -129,3 +129,17 @@ struct SystemProtocol{ // 44 bytes
         return protocol;
     }
 };
+
+inline SystemProtocol translate(ClientProtocol message) {
+    return SystemProtocol (
+        message.userId,
+        message.side,
+        message.padding,
+        message.price,
+        message.quantity,
+        message.timestamp,
+        1,
+        1,
+        1
+    );
+}
