@@ -131,8 +131,32 @@ struct SystemProtocol{ // 44 bytes
     }
 };
 
+uint32_t calculateChecksum(const SystemProtocol& message) {
+    uint32_t sum = 0;
+    
+    sum += message.userId;
+    sum += message.side ? 1 : 0;
+    sum += message.padding ? 1 : 0;
+    sum += static_cast<uint32_t>(message.price & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>((message.price >> 32) & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>(message.quantity);
+    sum += static_cast<uint32_t>(message.timestamp & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>((message.timestamp >> 32) & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>(message.seq_number & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>((message.seq_number >> 32) & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>(message.transaction_id & 0xFFFFFFFF);
+    sum += static_cast<uint32_t>((message.transaction_id >> 32) & 0xFFFFFFFF);
+    
+    return sum;
+}
+
+bool verifyChecksum(const SystemProtocol& message) {
+    uint32_t expectedChecksum = calculateChecksum(message);
+    return message.checksum == expectedChecksum;
+}
+
 inline SystemProtocol translate(ClientProtocol message) {
-    return SystemProtocol (
+    SystemProtocol dummy = SystemProtocol (
         message.userId,
         message.side,
         message.padding,
@@ -142,5 +166,17 @@ inline SystemProtocol translate(ClientProtocol message) {
         1,
         transactionId ++,
         1
+    );
+    uint32_t checksum = calculateChecksum(dummy);
+    return SystemProtocol (
+        message.userId,
+        message.side,
+        message.padding,
+        message.price,
+        message.quantity,
+        message.timestamp,
+        1,
+        transactionId ++,
+        checksum
     );
 }

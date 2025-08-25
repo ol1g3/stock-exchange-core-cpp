@@ -13,6 +13,10 @@ bool OrderBook::process(const SystemProtocol& newOrder) {
     if (!strategy) {
         return false;
     }
+    if(!verifyChecksum(newOrder)) {
+        
+        // request retransmission service
+    }
     std::vector<Event> events = strategy->match(newOrder, bids, asks);
     std::cout << bids.size() << " " << asks.size() << "\n";
     for (const auto& event : events) {
