@@ -44,3 +44,5 @@ todos
 .vscode
 .bin
 .obj
+bin
+obj

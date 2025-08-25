@@ -1,30 +1,33 @@
 CXX := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude
+CXXFLAGS := -std=c++20 -Wall -Wextra -pthread
+INC_FLAGS := -Iinclude
 LDFLAGS :=
 
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
 
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+DEPS := $(OBJS:.o=.d)
 TARGET := $(BIN_DIR)/exchange
 
-.PHONY: all clean
+.PHONY: all clean run
 
-all: directories $(TARGET)
-
-directories:
-    mkdir -p $(OBJ_DIR) $(BIN_DIR)
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-    $(CXX) $(CXXFLAGS) -c $< -o $@
+all: $(TARGET)
 
 $(TARGET): $(OBJS)
-    $(CXX) $^ -o $@ $(LDFLAGS)
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(INC_FLAGS) -c $< -o $@ -MMD -MP
 
 clean:
-    rm -rf $(OBJ_DIR) $(BIN_DIR)
+	@rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-run: $(TARGET)
-    ./$(TARGET)
+run: all
+	./$(TARGET)
+
+-include $(DEPS)
