@@ -3,7 +3,7 @@
 #include "../../include/core/order_book.h"
 
 bool EventQueue::push(const Event& event) {
-    queue.push_back(event);
+    queue.push(event);
     return true;
 }
 
@@ -12,6 +12,6 @@ Event EventQueue::poll() {
         return Event();
     }
     Event event = queue.front();
-    queue.erase(queue.begin());
+    queue.pop();
     return event;
 }

@@ -6,22 +6,18 @@
 
 OrderBook::OrderBook(const EventQueue& eventQueue) : eventQueue(eventQueue) {}
 
-bool OrderBook::process(const SystemProtocol& message) {
-    // Sleep for 500ms
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
-    Event event(std::chrono::system_clock::now().time_since_epoch().count(), 
-                static_cast<uint8_t>(EventType::COMPLETED));
-
-    
-    return eventQueue.push(event); // work with the boolean return here later
+bool OrderBook::process(const SystemProtocol& newOrder) {
+    std::vector<Event> events = strategy.match(newOrder,
+                            bids,
+                            asks);
+    for(Event event: events) eventQueue.push(event);
+    return true;
 }
 
 OrderBookPool::OrderBookPool(int n, EventQueue eventQueue) {
-    pool = std::vector<OrderBook>();
-    while (--n){
-        pool.push_back(*new OrderBook(eventQueue));
-    }
+    pool.reserve(n);
+    for(int i = 0;i < n;i ++)
+        pool.emplace_back(eventQueue, std::make_unique<FIFOStrategy>());
 }
 
 bool OrderBookPool::add(OrderBook orderBook){
