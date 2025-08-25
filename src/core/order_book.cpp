@@ -14,7 +14,7 @@ bool OrderBook::process(const SystemProtocol& newOrder) {
         return false;
     }
     std::vector<Event> events = strategy->match(newOrder, bids, asks);
-
+    std::cout << bids.size() << " " << asks.size() << "\n";
     for (const auto& event : events) {
         eventQueue.push(event);
     }

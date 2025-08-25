@@ -8,13 +8,14 @@
 #include "../common/types.h"
 #include "../queue/event_queue.h"
 #include "../core/matching_strategy.h"
+#include "../core/price_level.h"
 
 class OrderBook {
 private:
     EventQueue& eventQueue;
     std::unique_ptr<MatchingStrategy> strategy;
-    std::map<uint64_t, std::deque<SystemProtocol>, std::greater<uint64_t>> bids;
-    std::map<uint64_t, std::deque<SystemProtocol>> asks;
+    std::map<uint64_t, PriceLevel, std::greater<uint64_t>> bids;
+    std::map<uint64_t, PriceLevel> asks;
 
 public:
     OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> strategy);

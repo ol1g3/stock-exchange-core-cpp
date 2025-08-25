@@ -1,6 +1,7 @@
 #pragma once
 #include "../common/message.h"
 #include "../common/types.h"
+#include "price_level.h"
 #include <vector>
 #include <map>
 #include <deque>
@@ -11,8 +12,8 @@ public:
     virtual std::vector<Event> match(
         const SystemProtocol& newOrder,
         // greater sorts the map from highest to lowest
-        std::map<uint64_t, std::deque<SystemProtocol>, std::greater<uint64_t>>& bids,
-        std::map<uint64_t, std::deque<SystemProtocol>>& asks
+        std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
+        std::map<uint64_t, PriceLevel>& asks
     ) = 0;
     virtual ~MatchingStrategy() = default;
 };

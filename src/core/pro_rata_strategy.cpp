@@ -1,9 +1,9 @@
-#include "../../include/core/fifo_strategy.h"
+#include "../../include/core/pro_rata_strategy.h"
 #include "../../include/core/price_level.h"
 #include <chrono>
 #include <algorithm>
 
-std::vector<Event> FIFOStrategy::match(
+std::vector<Event> ProRataStrategy::match(
         const SystemProtocol& newOrder,
         std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
         std::map<uint64_t, PriceLevel>& asks
@@ -64,15 +64,15 @@ std::vector<Event> FIFOStrategy::match(
                 SystemProtocol updatedOrder = cur;
                 updatedOrder.quantity -= minVal;
 
+                
                 uint64_t now = std::chrono::system_clock::now().time_since_epoch().count();
-
                 if (updatedOrder.quantity == 0) {
                     events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::COMPLETED)});
                     priceLevelQueue.removeOrder(cur);
                 }
                 else {
-                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::UPDATED)});
                     priceLevelQueue.updateOrder(updatedOrder);
+                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::UPDATED)});
                 }
             }
 

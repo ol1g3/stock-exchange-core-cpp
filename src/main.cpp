@@ -22,13 +22,9 @@ int main(int argc, char const *argv[]){
     OrderEntryGateway orderEntryGateway(orderBookPool); 
 
     Client client(orderEntryGateway); 
-    
-    if (client.createOrder()) {
-        std::cout << "Order accepted by gateway." << std::endl;
-    }
-    else {
-        std::cout << "Order rejected by gateway." << std::endl;
-    }
+    client.createOrder();
+    client.createOrder();
+    client.createOrder();
 
     std::cout << "Exchange shutting down." << std::endl;
     return 0;

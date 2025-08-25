@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 
+static uint64_t transactionId = 1;
 struct ClientProtocol{ // 24 bytes
     uint32_t userId;
     bool side, padding;
@@ -139,7 +140,7 @@ inline SystemProtocol translate(ClientProtocol message) {
         message.quantity,
         message.timestamp,
         1,
-        1,
+        transactionId ++,
         1
     );
 }

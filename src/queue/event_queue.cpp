@@ -1,9 +1,11 @@
 #include <iostream>
 #include "../../include/queue/event_queue.h"
 #include "../../include/core/order_book.h"
+#include "../../include/client/client.h"
 
 bool EventQueue::push(const Event& event) {
     queue.push(event);
+    std::cout << event.timestamp << "\n"; 
     return true;
 }
 

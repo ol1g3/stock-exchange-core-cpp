@@ -5,9 +5,10 @@
 void TradeNotificationService::addClient(Client c){
     clients.push_back(c);
 }
+
 void TradeNotificationService::notify(Client c, Event e){
     if(find(clients.begin(), clients.end(), c) == clients.end()) return;
-    // notify    
+    c.getNotification(e);
 }
 
 ServiceType TradeNotificationService::getType() const {
