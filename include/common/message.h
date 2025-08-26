@@ -131,7 +131,7 @@ struct SystemProtocol{ // 44 bytes
     }
 };
 
-uint32_t calculateChecksum(const SystemProtocol& message) {
+inline uint32_t calculateChecksum(const SystemProtocol& message) {
     uint32_t sum = 0;
     
     sum += message.userId;
@@ -150,7 +150,7 @@ uint32_t calculateChecksum(const SystemProtocol& message) {
     return sum;
 }
 
-bool verifyChecksum(const SystemProtocol& message) {
+inline bool verifyChecksum(const SystemProtocol& message) {
     uint32_t expectedChecksum = calculateChecksum(message);
     return message.checksum == expectedChecksum;
 }

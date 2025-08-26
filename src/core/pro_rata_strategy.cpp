@@ -20,7 +20,7 @@ std::vector<Event> ProRataStrategy::match(
 
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
-                const SystemProtocol& cur = *priceLevelQueue.getBestOrder();
+                const SystemProtocol& cur = priceLevelQueue.getBestOrder();
                 int minVal = std::min(order.quantity, cur.quantity);
                 order.quantity -= minVal;
                 
@@ -56,7 +56,7 @@ std::vector<Event> ProRataStrategy::match(
 
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
-                const SystemProtocol& cur = *priceLevelQueue.getBestOrder();
+                const SystemProtocol& cur = priceLevelQueue.getBestOrder();
                 int minVal = std::min(order.quantity, cur.quantity);
 
                 order.quantity -= minVal;
