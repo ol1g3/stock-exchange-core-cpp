@@ -41,3 +41,9 @@ OrderBook* OrderBookPool::get(int ind){
     if(ind < 0 || static_cast<size_t>(ind) >= pool.size()) return nullptr;
     return &pool[ind];
 }
+
+bool OrderBookPool::process(const SystemProtocol& order){
+    uint32_t orderBookId = order.transaction_id % pool.size();
+    if(instrumentToBookIndex.size() &&  instrumentToBookIndex.find(order.userId) == instrumentToBookIndex.end()) orderBookId = (*instrumentToBookIndex.find(order.userId)).second;
+    return pool[orderBookId].process(order);
+}
