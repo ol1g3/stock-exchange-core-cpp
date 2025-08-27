@@ -1,15 +1,12 @@
 #pragma once
 #include <vector>
 #include <map>
-#include <deque>
-#include <memory>
-#include <functional>
 #include <unordered_map>
 #include "../common/message.h"
-#include "../common/types.h"
 #include "../queue/event_queue.h"
 #include "../core/matching_strategy.h"
 #include "../core/price_level.h"
+#include "../services/retransmission_service.h"
 
 class OrderBook {
 private:
@@ -20,13 +17,13 @@ private:
 
 public:
     OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> strategy);
-    bool process(const SystemProtocol& message);
+    bool process(const BatchSystemProtocol& message);
     
     OrderBook(OrderBook&&) = default;
     OrderBook(const OrderBook&);
     OrderBook& operator=(const OrderBook&);
     OrderBook& operator=(OrderBook&&);
-
+    std::vector<SystemProtocol> requestRetransmission(const int& fromId, const int& toId);
     ~OrderBook() = default;
 };
 
@@ -39,7 +36,8 @@ public:
     OrderBookPool() = default;
     OrderBookPool(int n, EventQueue& eventQueue);
     bool add(OrderBook&& orderBook);
+    int getSize();
     OrderBook* get(int ind);
-    bool process(const SystemProtocol& order);
+    bool process(const BatchSystemProtocol& order);
     ~OrderBookPool() = default;
 };

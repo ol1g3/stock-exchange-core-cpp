@@ -131,6 +131,58 @@ struct SystemProtocol{ // 44 bytes
     }
 };
 
+struct BatchSystemProtocol{ // 1000 bytes
+    // first byte contains the size of the batch
+    std::array<uint8_t, 1000> batch;
+
+    BatchSystemProtocol() : 
+        batch() {}
+
+    bool add_message(const SystemProtocol& message) {
+        int sz = batch[0];
+        if ((sz + 1) * 44 >= batch.size()) return false;
+        int ind = sz * 44 + 1;
+        batch[0] = ++sz;
+        std::memcpy(batch.data() + ind, &message.userId, sizeof(message.userId));
+        std::memcpy(batch.data() + ind + 4, &message.side, sizeof(message.side));
+        std::memcpy(batch.data() + ind + 5, &message.padding, sizeof(message.padding));
+        std::memcpy(batch.data() + ind + 6, &message.price, sizeof(message.price));
+        std::memcpy(batch.data() + ind + 14, &message.quantity, sizeof(message.quantity));
+        std::memcpy(batch.data() + ind + 16, &message.timestamp, sizeof(message.timestamp));
+        std::memcpy(batch.data() + ind + 24, &message.seq_number, sizeof(message.seq_number));
+        std::memcpy(batch.data() + ind + 32, &message.transaction_id, sizeof(message.transaction_id));
+        std::memcpy(batch.data() + ind + 40, &message.checksum, sizeof(message.checksum));
+        
+        return true;
+    }
+
+    SystemProtocol get_message(int index) const {
+        if (index < 0 || index >= batch[0]) return SystemProtocol();
+        
+        int offset = index * 44 + 1;
+        
+        SystemProtocol message;
+        std::memcpy(&message.userId, batch.data() + offset, sizeof(message.userId));
+        std::memcpy(&message.side, batch.data() + offset + 4, sizeof(message.side));
+        std::memcpy(&message.padding, batch.data() + offset + 5, sizeof(message.padding));
+        std::memcpy(&message.price, batch.data() + offset + 6, sizeof(message.price));
+        std::memcpy(&message.quantity, batch.data() + offset + 14, sizeof(message.quantity));
+        std::memcpy(&message.timestamp, batch.data() + offset + 16, sizeof(message.timestamp));
+        std::memcpy(&message.seq_number, batch.data() + offset + 24, sizeof(message.seq_number));
+        std::memcpy(&message.transaction_id, batch.data() + offset + 32, sizeof(message.transaction_id));
+        std::memcpy(&message.checksum, batch.data() + offset + 40, sizeof(message.checksum));
+        return message;
+    }
+
+    std::vector<SystemProtocol> get_all_messages() const {
+        std::vector<SystemProtocol> messages = {};
+        for (int i = 0;i < batch[0]; i ++){
+            messages.push_back(get_message(i));
+        }
+        return messages;
+    }
+};
+
 inline uint32_t calculateChecksum(const SystemProtocol& message) {
     uint32_t sum = 0;
     

@@ -9,7 +9,7 @@ private:
     std::chrono::milliseconds retentionPeriod;
 public:
     SnapshotService(int retentionPeriod) : orderQueue(), retentionPeriod(retentionPeriod) {};
-    bool forward(const SystemProtocol& message) override;
+    bool forward(const SystemProtocol& message);
     
     void snap();
     std::vector<SystemProtocol> getSnapshot();

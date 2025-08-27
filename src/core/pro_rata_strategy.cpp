@@ -3,8 +3,21 @@
 #include <chrono>
 #include <algorithm>
 
+std::vector<Event> ProRataStrategy::batchedMatch(
+        std::vector<SystemProtocol>& newBatch,
+        std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
+        std::map<uint64_t, PriceLevel>& asks
+) {
+    std::vector<Event> events;
+    for (SystemProtocol order : newBatch) {
+        std::vector<Event> newEvents = match(order, bids, asks);
+        events.insert(std::end(events), newEvents.begin(), newEvents.end());
+    }
+    return events;
+}
+
 std::vector<Event> ProRataStrategy::match(
-        const SystemProtocol& newOrder,
+        SystemProtocol& newOrder,
         std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
         std::map<uint64_t, PriceLevel>& asks
     ) {
