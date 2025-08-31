@@ -1,6 +1,7 @@
 #include "../../include/services/quote_service.h"
 #include <algorithm>
 #include <limits>
+#include <set>
 
 QuoteService::QuoteService(OrderBookPool* pool, int publishIntervalMs)
     : orderBookPool(pool), publishInterval(std::chrono::milliseconds(publishIntervalMs)) {
@@ -77,6 +78,69 @@ uint64_t QuoteService::getSpread() {
     }
     
     return lowestAsk - highestBid;
+}
+
+std::vector<std::pair<uint64_t, int16_t>> QuoteService::getTopBids(int depth) {
+    if (!orderBookPool || orderBookPool->getSize() == 0) {
+        return {};
+    }
+    
+    std::map<uint64_t, int16_t, std::greater<uint64_t>> aggregatedBids;
+    for (int i = 0; i < orderBookPool->getSize(); i++) {
+        OrderBook* book = orderBookPool->get(i);
+        if (!book) continue;
+        auto bookLevels = book->getTopPriceLevels(true, depth);
+        
+        for (const auto& level : bookLevels) {
+            aggregatedBids[level.first] += level.second;
+        }
+        if(aggregatedBids.size() > depth) {
+            aggregatedBids.erase(std::prev(aggregatedBids.end()));
+        }
+    }
+    
+    std::vector<std::pair<uint64_t, int16_t>> result;
+    result.reserve(depth);
+    
+    int count = 0;
+    for (const auto& bid : aggregatedBids) {
+        result.push_back(bid);
+        count++;
+    }
+    
+    return result;
+}
+
+std::vector<std::pair<uint64_t, int16_t>> QuoteService::getTopAsks(int depth) {
+    if (!orderBookPool || orderBookPool->getSize() == 0) {
+        return {};
+    }
+    
+    std::map<uint64_t, int16_t> aggregatedAsks;
+    for (int i = 0; i < orderBookPool->getSize(); i++) {
+        OrderBook* book = orderBookPool->get(i);
+        if (!book) continue;
+        auto bookLevels = book->getTopPriceLevels(false, depth);
+        
+        for (const auto& level : bookLevels) {
+            aggregatedAsks[level.first] += level.second;
+        }
+
+        if(aggregatedAsks.size() > depth) {
+            aggregatedAsks.erase(std::prev(aggregatedAsks.end()));
+        }
+    }
+    
+    std::vector<std::pair<uint64_t, int16_t>> result;
+    result.reserve(depth);
+    
+    int count = 0;
+    for (const auto& ask : aggregatedAsks) {
+        result.push_back(ask);
+        count++;
+    }
+    
+    return result;
 }
 
 void QuoteService::publishQuotes() {

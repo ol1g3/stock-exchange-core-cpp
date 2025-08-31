@@ -88,3 +88,41 @@ uint64_t OrderBook::getHighestBuy() {
     if (bids.size()) return (*bids.begin()).first;
     return 0;
 }
+
+std::vector<std::pair<uint64_t, int16_t>> OrderBook::getTopPriceLevels(bool isBid, int depth) const {
+    std::vector<std::pair<uint64_t, int16_t>> result;
+    result.reserve(depth);
+    
+    if(isBid) {
+        int count = 0;
+        for (const auto& level : bids) {
+            if(count >= depth) break;
+            
+            int16_t totalQuantity = 0;
+            std::vector<SystemProtocol> orders = level.second.getAllOrders();
+            for (const auto& order : orders) {
+                totalQuantity += order.quantity;
+            }
+            
+            result.push_back({level.first, totalQuantity});
+            count++;
+        }
+    }
+    else {
+        int count = 0;
+        for (const auto& level : asks) {
+            if(count >= depth) break;
+            
+            int16_t totalQuantity = 0;
+            std::vector<SystemProtocol> orders = level.second.getAllOrders();
+            for (const auto& order : orders) {
+                totalQuantity += order.quantity;
+            }
+            
+            result.push_back({level.first, totalQuantity});
+            count++;
+        }
+    }
+    
+    return result;
+}

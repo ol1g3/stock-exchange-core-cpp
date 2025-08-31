@@ -27,6 +27,8 @@ public:
     OrderBook& operator=(OrderBook&&);
     std::vector<SystemProtocol> requestRetransmission(const int& fromId, const int& toId);
     std::vector<BatchSystemProtocol> requestSnapshots(const int& fromSeqNum, const int& toSeqNum);
+
+    std::vector<std::pair<uint64_t, int16_t>> getTopPriceLevels(bool isBid, int depth) const;
     ~OrderBook() = default;
 };
 
