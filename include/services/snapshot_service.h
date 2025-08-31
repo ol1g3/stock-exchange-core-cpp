@@ -1,24 +1,31 @@
 #pragma once
 #include "service_interface.h"
-#include "../core/order_book.h"
 #include <queue>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
+class BatchSystemProtocol;
+class OrderBook;
+
+/**
+ * @brief Service for storing and retrieving order book snapshots for recovery.
+ */
 class SnapshotService : public ServiceInterface {
 private:
-    std::thread snapshotThread;
+    // Singleton pattern
+    static SnapshotService* instance;
     static std::mutex snapshotMutex;
+
+    std::thread snapshotThread;
     std::atomic<bool> running{false};
     std::queue<BatchSystemProtocol> batchSnapshots;
     std::chrono::milliseconds retentionPeriod;
-    static SnapshotService *instance;
+    void run();
 
 public:
-    void run();
-    SnapshotService() :
-        retentionPeriod(std::chrono::milliseconds(10000)) {};
-    SnapshotService(int retentionPeriodMs) :
-        retentionPeriod(retentionPeriodMs) {};
-
+    SnapshotService();
+    explicit SnapshotService(int retentionPeriodMs);
     static SnapshotService& getInstance();
 
 
@@ -29,6 +36,6 @@ public:
 
     void process(BatchSystemProtocol batch);
     std::vector<BatchSystemProtocol> getSnaphots(uint64_t seqNumberFrom, uint64_t seqNumberTo);
-    
+
     ~SnapshotService() override = default;
 };

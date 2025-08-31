@@ -5,18 +5,11 @@
 
 RetransmissionService* RetransmissionService::instance = nullptr;
 
-RetransmissionService::RetransmissionService() : running(false){
-
-}
+RetransmissionService::RetransmissionService() : running(false) {}
 
 RetransmissionService& RetransmissionService::getInstance() {
-    if (instance == nullptr) {
-        std::lock_guard<std::mutex> lock(instanceMutex);
-        if(instance == nullptr) {
-            instance = new RetransmissionService();
-        }
-    }
-    return *instance;
+    static RetransmissionService instance;
+    return instance;
 }
 
 bool RetransmissionService::start() {
@@ -40,6 +33,7 @@ ServiceType RetransmissionService::getType() const {
 }
 
 void RetransmissionService::processBatch(BatchSystemProtocol batch) {
+    std::lock_guard<std::mutex> lock(instanceMutex);
     for (const auto& order : batch.get_all_messages())
         orders.push(order);
 }
@@ -61,9 +55,10 @@ bool RetransmissionService::addConsumer(OrderBook* orderBook) {
 }
 
 bool RetransmissionService::addPoolConsumers(OrderBookPool& orderPool) {
-    for (size_t i = 0; i < orderPool.getSize(); i++) {
-        if (OrderBook* book = orderPool.get(i)) {
-            addConsumer(book);
+    std::lock_guard<std::mutex> lock(instanceMutex);
+    for(size_t i = 0; i < orderPool.getSize(); i++) {
+        if(OrderBook* book = orderPool.get(i)) {
+            consumers.insert(book);
         }
     }
     return true;

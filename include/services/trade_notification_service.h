@@ -1,11 +1,17 @@
-#include <vector>
+#pragma once
 #include "service_interface.h"
-#include "../client/client.h"
 #include "../common/types.h"
-#include "../queue/event_queue.h"
+#include "../client/client.h"
+#include <vector>
 #include <thread>
 #include <atomic>
 
+class EventQueue;
+struct SystemProtocol;
+
+/**
+ * @brief Service for notifying clients about trade events.
+ */
 class TradeNotificationService : public ServiceInterface {
 private:
     std::vector<Client> clients;
@@ -13,11 +19,12 @@ private:
     std::atomic<bool> running{false};
     EventQueue* queue;
 public:
-    TradeNotificationService() : queue(nullptr) {}
+    TradeNotificationService();
+
     void addClient(Client c);
     void notify(Client c, Event e);
     void setEventQueue(EventQueue* eventQueue);
-    
+
     ServiceType initialize();
     bool start() override;
     bool stop() override;
@@ -25,5 +32,6 @@ public:
     bool run();
     bool forward(const SystemProtocol& message);
     ServiceType getType() const override;
+
     ~TradeNotificationService() override = default;
 };

@@ -9,6 +9,9 @@ std::thread processingThread;
 std::atomic<bool> running{false};
 EventQueue* queue;
 
+TradeNotificationService::TradeNotificationService() : queue(nullptr) {};
+
+
 void TradeNotificationService::addClient(Client c){
     clients.push_back(c);
 }

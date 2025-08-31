@@ -2,6 +2,7 @@
 #include <vector>
 
 SnapshotService* SnapshotService::instance = nullptr;
+const int maxSnapshotNumber = 1000;
 
 bool SnapshotService::start() {
     running = true;
@@ -23,7 +24,9 @@ bool SnapshotService::isRunning() {
 }
 
 void SnapshotService::process(BatchSystemProtocol batch) {
+    std::lock_guard<std::mutex> lock(snapshotMutex);
     batchSnapshots.push(batch);
+    if (batchSnapshots.size() > maxSnapshotNumber) batchSnapshots.pop();
 }
 
 void SnapshotService::run() {
@@ -34,27 +37,18 @@ void SnapshotService::run() {
 }
 
 SnapshotService& SnapshotService::getInstance() {
-    if (instance == nullptr) {
-        std::lock_guard<std::mutex> lock(snapshotMutex);
-        if(instance == nullptr) {
-            instance = new SnapshotService();
-        }
-    }
-    return *instance;
+    static SnapshotService instance;
+    return instance;
 }
-
 
 std::vector<BatchSystemProtocol> SnapshotService::getSnaphots(uint64_t seqNumberFrom, uint64_t seqNumberTo) {
     std::lock_guard<std::mutex> lock(snapshotMutex);
     std::vector<BatchSystemProtocol> result;
 
     while (!batchSnapshots.empty()) {
-        BatchSystemProtocol batch = batchSnapshots.front();
+        const BatchSystemProtocol& batch = batchSnapshots.front();
         uint64_t batchSeqNumber = batch.get_message(0).seq_number;
         batchSnapshots.pop();
-        if (batchSeqNumber < seqNumberFrom) continue;
-        if (batchSeqNumber > seqNumberTo) break;
-        result.push_back(batch);
     }
     return result;
 }
