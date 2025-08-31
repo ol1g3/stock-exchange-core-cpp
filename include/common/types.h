@@ -14,3 +14,8 @@ struct Event {
     Event() : timestamp(0), orderId(0), type(0) {}
     Event(uint64_t timestamp, uint64_t orderId, uint8_t type) : timestamp(timestamp), orderId(orderId), type(type) {}
 };
+
+struct QuoteSummary {
+    uint64_t highestBid;
+    uint64_t lowestAsk;
+};

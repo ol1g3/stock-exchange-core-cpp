@@ -1,6 +1,8 @@
 #include "../../include/services/order_entry_gateway.h"
 #include "../../include/common/message.h"
 
+
+static int seq_number = 1;
 OrderEntryGateway::OrderEntryGateway(OrderBookPool& pool) 
     : running(false), orderBookPool(pool) {}
 
@@ -25,7 +27,7 @@ bool OrderEntryGateway::isRunning() {
 }
 
 bool OrderEntryGateway::acceptOrder(const ClientProtocol& message){
-    SystemProtocol systemMessage = translate(message);
+    SystemProtocol systemMessage = translate(message, seq_number);
     {
         std::lock_guard<std::mutex> lock (batchMutex);
         if (!batch.add_message(systemMessage)) return false;
@@ -44,6 +46,9 @@ bool OrderEntryGateway::run() {
         if (batchToSend.batch[0] > 0){
             OrderBook* dest = orderBookPool.get(0);
             if (dest == nullptr) return false;
+            seq_number ++;
+            retransmission_service.processBatch(batchToSend);
+            snapshot_service.process(batchToSend);
             return dest->process(batchToSend);
         }
     }

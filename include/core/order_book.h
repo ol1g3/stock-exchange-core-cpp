@@ -18,12 +18,15 @@ private:
 public:
     OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> strategy);
     bool process(const BatchSystemProtocol& message);
+    uint64_t getLowestSell();
+    uint64_t getHighestBuy();
     
     OrderBook(OrderBook&&) = default;
     OrderBook(const OrderBook&);
     OrderBook& operator=(const OrderBook&);
     OrderBook& operator=(OrderBook&&);
     std::vector<SystemProtocol> requestRetransmission(const int& fromId, const int& toId);
+    std::vector<BatchSystemProtocol> requestSnapshots(const int& fromSeqNum, const int& toSeqNum);
     ~OrderBook() = default;
 };
 

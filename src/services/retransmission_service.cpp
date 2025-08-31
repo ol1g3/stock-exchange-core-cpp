@@ -4,7 +4,6 @@
 #include <chrono>
 
 RetransmissionService* RetransmissionService::instance = nullptr;
-std::mutex RetransmissionService::instanceMutex;
 
 RetransmissionService::RetransmissionService() : running(false){
 
@@ -22,7 +21,7 @@ RetransmissionService& RetransmissionService::getInstance() {
 
 bool RetransmissionService::start() {
     running = true;
-    instanceThread = std::thread(&RetransmissionService::runRetransmission, this);
+    instanceThread = std::thread(&RetransmissionService::run, this);
     return true;
 }
 
@@ -40,9 +39,16 @@ ServiceType RetransmissionService::getType() const {
     return ServiceType::RetransmissionService;
 }
 
-void RetransmissionService::runRetransmission() {
+void RetransmissionService::processBatch(BatchSystemProtocol batch) {
+    for (const auto& order : batch.get_all_messages())
+        orders.push(order);
+}
+
+
+void RetransmissionService::run() {
     while(isRunning()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // add some logic later
     }
 }
 

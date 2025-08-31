@@ -9,14 +9,16 @@ class OrderBookPool;
 class RetransmissionService : public ServiceInterface {
 private:
     static RetransmissionService* instance;
-    static std::mutex instanceMutex;
     std::thread instanceThread;
+    static std::mutex instanceMutex;
 
     RetransmissionService();
 
     std::unordered_set<OrderBook*> consumers;
     std::queue<SystemProtocol> orders;
     bool running;
+
+    void run();
 
 public:
     RetransmissionService(const RetransmissionService&) = delete;
@@ -26,8 +28,9 @@ public:
     bool start() override;
     bool stop() override;
     bool isRunning() override;
-    void runRetransmission();
     ServiceType getType() const override;
+
+    void processBatch(BatchSystemProtocol batch);
 
     bool addConsumer(OrderBook* orderBook);
     bool addPoolConsumers(OrderBookPool& orderPool);

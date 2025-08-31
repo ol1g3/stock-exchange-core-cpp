@@ -207,7 +207,7 @@ inline bool verifyChecksum(const SystemProtocol& message) {
     return message.checksum == expectedChecksum;
 }
 
-inline SystemProtocol translate(ClientProtocol message) {
+inline SystemProtocol translate(ClientProtocol message, int seq_number) {
     SystemProtocol dummy = SystemProtocol (
         message.userId,
         message.side,
@@ -215,7 +215,7 @@ inline SystemProtocol translate(ClientProtocol message) {
         message.price,
         message.quantity,
         message.timestamp,
-        1,
+        seq_number,
         transactionId ++,
         1
     );
@@ -227,7 +227,7 @@ inline SystemProtocol translate(ClientProtocol message) {
         message.price,
         message.quantity,
         message.timestamp,
-        1,
+        seq_number,
         transactionId ++,
         checksum
     );

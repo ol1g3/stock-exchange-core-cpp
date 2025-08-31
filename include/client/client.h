@@ -10,6 +10,7 @@ public:
     Client(OrderEntryGateway& orderEntryGateway);
     bool createOrder();
     void getNotification(const Event& event);
+    void receiveQuoteUpdate(QuoteSummary summary);
     bool operator==(const Client& b) const;
     ~Client() = default;
 };

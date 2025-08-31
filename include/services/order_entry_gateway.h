@@ -1,5 +1,7 @@
 #pragma once
 #include "service_interface.h"
+#include "snapshot_service.h"
+#include "retransmission_service.h"
 #include "../core/order_book.h"
 #include <thread>
 
@@ -12,6 +14,12 @@ private:
     std::mutex batchMutex;
     std::thread batchThread;
 
+
+    static RetransmissionService retransmission_service;
+    static SnapshotService snapshot_service;
+
+    bool run();
+
 public:
     OrderEntryGateway(OrderBookPool& orderBookPool);
     bool acceptOrder(const ClientProtocol& message);
@@ -20,7 +28,8 @@ public:
     bool start() override;
     bool stop() override;
     bool isRunning() override;
-    bool run();
+
+    void process(BatchSystemProtocol batch);
     ServiceType getType() const override;
     
     ~OrderEntryGateway() override = default;
