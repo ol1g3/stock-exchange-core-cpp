@@ -54,7 +54,7 @@ uint64_t QuoteService::getHighestBid() {
         return 0;
     }
     
-    return 0;
+    return (*book).getHighestBuy();
 }
 
 uint64_t QuoteService::getLowestAsk() {
@@ -67,7 +67,7 @@ uint64_t QuoteService::getLowestAsk() {
         return std::numeric_limits<uint64_t>::max();
     }
     
-    return 0;
+    return (*book).getLowestSell();
 }
 
 uint64_t QuoteService::getSpread() {

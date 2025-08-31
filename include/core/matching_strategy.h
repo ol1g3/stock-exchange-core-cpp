@@ -7,6 +7,7 @@
 #include <deque>
 #include <functional>
 
+//! @brief Abstract interface for order matching algorithms used by the exchange.
 class MatchingStrategy {
 public:
     virtual std::vector<Event> match(

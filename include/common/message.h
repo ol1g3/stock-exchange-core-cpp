@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 
+//! @brief Defines protocol structures and serialization for client and system messages in the exchange.
 static uint64_t transactionId = 1;
 struct ClientProtocol{ // 24 bytes
     uint32_t userId;
