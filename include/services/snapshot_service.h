@@ -35,7 +35,7 @@ public:
     ServiceType getType() const override;
 
     void process(BatchSystemProtocol batch);
-    std::vector<BatchSystemProtocol> getSnaphots(uint64_t seqNumberFrom, uint64_t seqNumberTo);
+    std::vector<BatchSystemProtocol> getSnapshots(uint64_t seqNumberFrom, uint64_t seqNumberTo);
 
     ~SnapshotService() override = default;
 };

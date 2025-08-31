@@ -49,7 +49,7 @@ std::vector<SystemProtocol> OrderBook::requestRetransmission(const int &fromId, 
 }
 
 std::vector<BatchSystemProtocol> OrderBook::requestSnapshots(const int &fromSeqNum, const int &toSeqNum) {
-    return SnapshotService::getInstance().getSnaphots(fromSeqNum, toSeqNum);
+    return SnapshotService::getInstance().getSnapshots(fromSeqNum, toSeqNum);
 }
 
 OrderBookPool::OrderBookPool(int n, EventQueue& eventQueue) {

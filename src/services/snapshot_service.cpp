@@ -1,7 +1,6 @@
 #include "../../include/services/snapshot_service.h"
 #include <vector>
 
-SnapshotService* SnapshotService::instance = nullptr;
 const int maxSnapshotNumber = 1000;
 
 bool SnapshotService::start() {
@@ -12,6 +11,7 @@ bool SnapshotService::start() {
 
 bool SnapshotService::stop() {
     running = false;
+    if(snapshotThread.joinable()) snapshotThread.join();
     return true;
 }
 
@@ -41,7 +41,7 @@ SnapshotService& SnapshotService::getInstance() {
     return instance;
 }
 
-std::vector<BatchSystemProtocol> SnapshotService::getSnaphots(uint64_t seqNumberFrom, uint64_t seqNumberTo) {
+std::vector<BatchSystemProtocol> SnapshotService::getSnapshots(uint64_t seqNumberFrom, uint64_t seqNumberTo) {
     std::lock_guard<std::mutex> lock(snapshotMutex);
     std::vector<BatchSystemProtocol> result;
 

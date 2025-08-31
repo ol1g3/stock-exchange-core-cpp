@@ -3,8 +3,6 @@
 #include <thread>
 #include <chrono>
 
-RetransmissionService* RetransmissionService::instance = nullptr;
-
 RetransmissionService::RetransmissionService() : running(false) {}
 
 RetransmissionService& RetransmissionService::getInstance() {
