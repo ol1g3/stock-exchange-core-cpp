@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <mutex>
 #include <thread>
+#include <queue>
 
 class OrderBook;
 class OrderBookPool;
@@ -17,7 +18,6 @@ private:
     RetransmissionService(const RetransmissionService&) = delete;
     RetransmissionService& operator=(const RetransmissionService&) = delete;
 
-    static RetransmissionService* instance;
     static std::mutex instanceMutex;
 
     std::thread instanceThread;

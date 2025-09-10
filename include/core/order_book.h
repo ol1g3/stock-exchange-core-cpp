@@ -21,10 +21,11 @@ public:
     uint64_t getLowestSell();
     uint64_t getHighestBuy();
     
-    OrderBook(OrderBook&&) = default;
-    OrderBook(const OrderBook&);
-    OrderBook& operator=(const OrderBook&);
-    OrderBook& operator=(OrderBook&&);
+    OrderBook(OrderBook&&) = delete;
+    OrderBook(const OrderBook&) = delete;
+    OrderBook& operator=(OrderBook&&) = delete;
+    OrderBook& operator=(const OrderBook&) = delete;
+    
     std::vector<SystemProtocol> requestRetransmission(const int& fromId, const int& toId);
     std::vector<BatchSystemProtocol> requestSnapshots(const int& fromSeqNum, const int& toSeqNum);
 
@@ -34,15 +35,14 @@ public:
 
 class OrderBookPool {
 private:
-    std::vector<OrderBook> pool;
-    // partition by userId (for now)
+    std::vector<std::unique_ptr<OrderBook>> pool; // Use unique_ptr instead
     std::unordered_map<uint32_t, uint32_t> instrumentToBookIndex;
 public:
     OrderBookPool() = default;
     OrderBookPool(int n, EventQueue& eventQueue);
-    bool add(OrderBook&& orderBook);
-    int getSize();
-    OrderBook* get(int ind);
+    bool add(std::unique_ptr<OrderBook> orderBook);
+    size_t getSize() const;
+    OrderBook* get(size_t ind);
     bool process(const BatchSystemProtocol& order);
     ~OrderBookPool() = default;
 };

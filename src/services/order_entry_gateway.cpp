@@ -1,24 +1,41 @@
 #include "../../include/services/order_entry_gateway.h"
 #include "../../include/common/message.h"
+#include <iostream>
+#include <thread>
+#include <chrono>
 
-
-static int seq_number = 1;
 OrderEntryGateway::OrderEntryGateway(OrderBookPool& pool) 
     : running(false), orderBookPool(pool) {}
 
-ServiceType OrderEntryGateway::initialize() {
-    return ServiceType::OrderEntryGateway;
-}
-
 bool OrderEntryGateway::start() {
+    if(running) {
+        return true;
+    }
+    
     running = true;
     batchThread = std::thread(&OrderEntryGateway::run, this);
+    
     return true;
 }
 
 bool OrderEntryGateway::stop() {
+    if(!running) {
+        return true;
+    }
+    
     running = false;
-    if(batchThread.joinable()) batchThread.join();
+    
+    {
+        std::lock_guard<std::mutex> lock(batchMutex);
+        if(batch.batch[0] > 0) {
+            std::cout << "Processing final batch of " << (int)batch.batch[0] << " orders before shutdown" << std::endl;
+            orderBookPool.process(batch);
+        }
+    }
+    
+    if(batchThread.joinable()) {
+        batchThread.join();
+    }
     return true;
 }
 
@@ -26,30 +43,39 @@ bool OrderEntryGateway::isRunning() {
     return running;
 }
 
-bool OrderEntryGateway::acceptOrder(const ClientProtocol& message){
-    SystemProtocol systemMessage = translate(message, seq_number);
-    {
-        std::lock_guard<std::mutex> lock (batchMutex);
-        if (!batch.add_message(systemMessage)) return false;
+bool OrderEntryGateway::acceptOrder(const ClientProtocol& order) {
+    if(!running) {
+        return false;
+    }
+
+    static int transactionCounter = 1;
+    SystemProtocol systemOrder = translate(order, transactionCounter++);
+    
+    std::lock_guard<std::mutex> lock(batchMutex);
+    
+    if(!batch.add_message(systemOrder)) {
+        std::cout << "Batch full (" << (int)batch.batch[0] << " orders), processing" << std::endl;
+        orderBookPool.process(batch);
+        
+        batch = BatchSystemProtocol();
+        if(!batch.add_message(systemOrder)) {
+            std::cout << "Failed to add order to new batch" << std::endl;
+            return false;
+        }
     }
     return true;
 }
 
 bool OrderEntryGateway::run() {
-    while(isRunning()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // change later
-        BatchSystemProtocol batchToSend;
-        {
-            std::lock_guard<std::mutex> lock (batchMutex);
-            std::swap(batchToSend, batch);
-        }
-        if (batchToSend.batch[0] > 0){
-            OrderBook* dest = orderBookPool.get(0);
-            if (dest == nullptr) return false;
-            seq_number ++;
-            retransmission_service.processBatch(batchToSend);
-            snapshot_service.process(batchToSend);
-            return dest->process(batchToSend);
+    while(running) {
+        std::this_thread::sleep_for(batchInterval);
+        if(!running) break;
+        std::lock_guard<std::mutex> lock(batchMutex);
+        
+        if(batch.batch[0] > 0) {
+            std::cout << "Processing batch of " << (int)batch.batch[0] << " orders (periodic)" << std::endl;
+            orderBookPool.process(batch);
+            batch = BatchSystemProtocol();
         }
     }
     return true;
@@ -57,4 +83,24 @@ bool OrderEntryGateway::run() {
 
 ServiceType OrderEntryGateway::getType() const {
     return ServiceType::OrderEntryGateway;
+}
+
+ServiceType OrderEntryGateway::initialize() {
+    return ServiceType::OrderEntryGateway;
+}
+
+bool OrderEntryGateway::forward(const SystemProtocol& message) {
+    std::lock_guard<std::mutex> lock(batchMutex);
+    
+    if(!batch.add_message(message)) {
+        orderBookPool.process(batch);
+        batch = BatchSystemProtocol();
+        return batch.add_message(message);
+    }
+    
+    return true;
+}
+
+void OrderEntryGateway::process(const BatchSystemProtocol& incomingBatch) {
+    orderBookPool.process(incomingBatch);
 }

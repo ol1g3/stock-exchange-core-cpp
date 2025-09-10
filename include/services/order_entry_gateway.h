@@ -4,6 +4,7 @@
 #include "retransmission_service.h"
 #include "../core/order_book.h"
 #include <thread>
+#include <mutex>
 
 class OrderEntryGateway : public ServiceInterface {
 private:
@@ -13,10 +14,6 @@ private:
     std::chrono::milliseconds batchInterval = std::chrono::milliseconds(2000);
     std::mutex batchMutex;
     std::thread batchThread;
-
-
-    static RetransmissionService retransmission_service;
-    static SnapshotService snapshot_service;
 
     bool run();
 
@@ -29,7 +26,8 @@ public:
     bool stop() override;
     bool isRunning() override;
 
-    void process(BatchSystemProtocol batch);
+    void process(const BatchSystemProtocol& batch);
+    bool forward(const SystemProtocol& message);
     ServiceType getType() const override;
     
     ~OrderEntryGateway() override = default;

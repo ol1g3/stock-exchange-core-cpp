@@ -1,9 +1,11 @@
 #pragma once
 #include <iostream>
 #include <array>
+#include <atomic>
 
 //! @brief Defines protocol structures and serialization for client and system messages in the exchange.
-static uint64_t transactionId = 1;
+static std::atomic<uint64_t> transactionId{0};
+
 struct ClientProtocol{ // 24 bytes
     uint32_t userId;
     bool side, padding;
@@ -140,10 +142,10 @@ struct BatchSystemProtocol{ // 1000 bytes
         batch() {}
 
     bool add_message(const SystemProtocol& message) {
-        int sz = batch[0];
-        if ((sz + 1) * 44 >= batch.size()) return false;
+        int sz = static_cast<int>(batch[0]);
+        if (static_cast<size_t>((sz + 1) * 44) >= batch.size()) return false;
         int ind = sz * 44 + 1;
-        batch[0] = ++sz;
+        batch[0] = static_cast<uint8_t>(++sz);
         std::memcpy(batch.data() + ind, &message.userId, sizeof(message.userId));
         std::memcpy(batch.data() + ind + 4, &message.side, sizeof(message.side));
         std::memcpy(batch.data() + ind + 5, &message.padding, sizeof(message.padding));
@@ -209,6 +211,7 @@ inline bool verifyChecksum(const SystemProtocol& message) {
 }
 
 inline SystemProtocol translate(ClientProtocol message, int seq_number) {
+    uint64_t currentTransactionId = transactionId.fetch_add(1);
     SystemProtocol dummy = SystemProtocol (
         message.userId,
         message.side,
@@ -217,7 +220,7 @@ inline SystemProtocol translate(ClientProtocol message, int seq_number) {
         message.quantity,
         message.timestamp,
         seq_number,
-        transactionId ++,
+        currentTransactionId,
         1
     );
     uint32_t checksum = calculateChecksum(dummy);
@@ -229,7 +232,7 @@ inline SystemProtocol translate(ClientProtocol message, int seq_number) {
         message.quantity,
         message.timestamp,
         seq_number,
-        transactionId ++,
+        currentTransactionId,
         checksum
     );
 }

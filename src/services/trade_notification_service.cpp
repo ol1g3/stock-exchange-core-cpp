@@ -4,13 +4,7 @@
 #include <thread>
 #include <atomic>
 
-// Add these private members to the header file
-std::thread processingThread;
-std::atomic<bool> running{false};
-EventQueue* queue;
-
-TradeNotificationService::TradeNotificationService() : queue(nullptr) {};
-
+TradeNotificationService::TradeNotificationService() : queue(nullptr) {}
 
 void TradeNotificationService::addClient(Client c){
     clients.push_back(c);
@@ -48,15 +42,12 @@ bool TradeNotificationService::isRunning() {
 }
 
 bool TradeNotificationService::run() {
-    std::cout << "TradeNotificationService::run starting" << std::endl;
-    
     while (running) {
         if (queue) {
             Event event = queue->poll();
-            if (event.orderId > 0) {
+            if (event.orderId > 0 && event.orderId != UINT32_MAX) {
                 std::cout << "TradeNotificationService: Processing event " << event.orderId << std::endl;
                 for (auto& client : clients) {
-                    std::cout << "Notifying client" << std::endl;
                     client.getNotification(event);
                 }
             }

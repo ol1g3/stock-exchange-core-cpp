@@ -6,13 +6,20 @@ enum struct EventType {
     UPDATED = 2,
 };
 
+enum struct OrderStatus {
+    Filled = 1,
+    PartiallyFilled = 2,
+    Added = 3,
+    New = 4,
+};
+
 struct Event {
     uint64_t timestamp;
     uint64_t orderId;
-    uint8_t type;
+    OrderStatus status;
 
-    Event() : timestamp(0), orderId(0), type(0) {}
-    Event(uint64_t timestamp, uint64_t orderId, uint8_t type) : timestamp(timestamp), orderId(orderId), type(type) {}
+    Event() : timestamp(0), orderId(0), status(OrderStatus::New) {}
+    Event(uint64_t timestamp, uint64_t orderId, uint8_t status) : timestamp(timestamp), orderId(orderId), status(static_cast<OrderStatus>(status)) {}
 };
 
 struct QuoteSummary {

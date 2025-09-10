@@ -17,8 +17,12 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
         return false;
     }
     std::vector<SystemProtocol> messages = batch.get_all_messages();
-    if (messages.at(0).seq_number > lastProcessedSeqNum + 1) {
-        std::vector<BatchSystemProtocol> lostBatches = requestSnapshots(lastProcessedSeqNum + 1, messages.at(0).seq_number);
+    if (messages.empty()) {
+        return true;
+    }
+    
+    if (static_cast<int>(messages.at(0).seq_number) > lastProcessedSeqNum + 1) {
+        std::vector<BatchSystemProtocol> lostBatches = requestSnapshots(lastProcessedSeqNum + 1, static_cast<int>(messages.at(0).seq_number));
         messages.clear();
         for (const auto& batch : lostBatches) {
             for(const auto& order: batch.get_all_messages()) {
@@ -27,13 +31,13 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
         }
     }
     else {
-        for (size_t i = 0;i < messages.size();i ++) {
+        for (size_t i = 0; i < messages.size(); i++) {
             const auto& message = messages.at(i);
-            if (message.seq_number != expectedTransactionNum) {
-                std::vector<SystemProtocol> missingOrders = requestRetransmission(expectedTransactionNum, expectedTransactionNum + messages.size() - i - 1);
-                messages.insert(messages.begin() + i, missingOrders.begin(), missingOrders.end());
+            if (static_cast<int>(message.seq_number) != expectedTransactionNum) {
+                std::vector<SystemProtocol> missingOrders = requestRetransmission(expectedTransactionNum, expectedTransactionNum + static_cast<int>(messages.size()) - static_cast<int>(i) - 1);
+                messages.insert(messages.begin() + static_cast<long>(i), missingOrders.begin(), missingOrders.end());
             }
-            expectedTransactionNum ++;
+            expectedTransactionNum++;
         }
     }
     std::vector<Event> events = strategy->batchedMatch(messages, bids, asks);
@@ -41,6 +45,7 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
         eventQueue.push(event);
     }
     
+    lastProcessedSeqNum = static_cast<int>(messages.back().seq_number);
     return true;
 }
 
@@ -49,33 +54,32 @@ std::vector<SystemProtocol> OrderBook::requestRetransmission(const int &fromId, 
 }
 
 std::vector<BatchSystemProtocol> OrderBook::requestSnapshots(const int &fromSeqNum, const int &toSeqNum) {
-    return SnapshotService::getInstance().getSnapshots(fromSeqNum, toSeqNum);
+    return SnapshotService::getInstance().getSnapshots(static_cast<uint64_t>(fromSeqNum), static_cast<uint64_t>(toSeqNum));
 }
 
 OrderBookPool::OrderBookPool(int n, EventQueue& eventQueue) {
-    pool.reserve(n);
+    pool.reserve(static_cast<size_t>(n));
     for(int i = 0; i < n; ++i) {
-        pool.emplace_back(eventQueue, std::make_unique<FIFOStrategy>());
+        pool.push_back(std::make_unique<OrderBook>(eventQueue, std::make_unique<FIFOStrategy>()));
     }
 }
 
-bool OrderBookPool::add(OrderBook&& orderBook){
+bool OrderBookPool::add(std::unique_ptr<OrderBook> orderBook){
     pool.push_back(std::move(orderBook));
     return true;
 }
 
-OrderBook* OrderBookPool::get(int ind){
-    if(ind < 0 || static_cast<size_t>(ind) >= pool.size()) return nullptr;
-    return &pool.at(ind);
+OrderBook* OrderBookPool::get(size_t ind){
+    if(ind >= pool.size()) return nullptr;
+    return pool.at(ind).get();
 }
 
 bool OrderBookPool::process(const BatchSystemProtocol& order){
-    uint32_t orderBookId = 0; // change later
-    // if(instrumentToBookIndex.size() &&  instrumentToBookIndex.find(order.userId) == instrumentToBookIndex.end()) orderBookId = (*instrumentToBookIndex.find(order.userId)).second;
-    return pool.at(orderBookId).process(order);
+    size_t orderBookId = 0; // change later
+    return pool.at(orderBookId)->process(order);
 }
 
-int OrderBookPool::getSize() {
+size_t OrderBookPool::getSize() const {
     return pool.size();
 }
 
@@ -91,7 +95,7 @@ uint64_t OrderBook::getHighestBuy() {
 
 std::vector<std::pair<uint64_t, int16_t>> OrderBook::getTopPriceLevels(bool isBid, int depth) const {
     std::vector<std::pair<uint64_t, int16_t>> result;
-    result.reserve(depth);
+    result.reserve(static_cast<size_t>(depth));
     
     if(isBid) {
         int count = 0;

@@ -5,7 +5,7 @@
 #include <atomic>
 #include <mutex>
 
-class BatchSystemProtocol;
+struct BatchSystemProtocol;
 class OrderBook;
 
 /**

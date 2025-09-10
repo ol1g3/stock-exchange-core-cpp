@@ -4,6 +4,7 @@
 #include <chrono>
 
 RetransmissionService::RetransmissionService() : running(false) {}
+std::mutex RetransmissionService::instanceMutex;
 
 RetransmissionService& RetransmissionService::getInstance() {
     static RetransmissionService instance;
@@ -36,7 +37,6 @@ void RetransmissionService::processBatch(BatchSystemProtocol batch) {
         orders.push(order);
 }
 
-
 void RetransmissionService::run() {
     while(isRunning()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -65,9 +65,13 @@ bool RetransmissionService::addPoolConsumers(OrderBookPool& orderPool) {
 std::vector<SystemProtocol> RetransmissionService::batchRequest(const int& fromId, const int& toId) {
     std::lock_guard<std::mutex> lock(instanceMutex);
     if (fromId > toId) return {};
-    while (!orders.empty() && orders.front().transaction_id < fromId) orders.pop();
+    
+    while (!orders.empty() && static_cast<int>(orders.front().transaction_id) < fromId) {
+        orders.pop();
+    }
+    
     std::vector<SystemProtocol> lostOrders = {};
-    while(!orders.empty() && orders.front().transaction_id < toId) {
+    while(!orders.empty() && static_cast<int>(orders.front().transaction_id) < toId) {
         lostOrders.push_back(orders.front());
         orders.pop();
     }

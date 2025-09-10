@@ -1,8 +1,8 @@
 #include "../../include/core/fifo_strategy.h"
-#include "../../include/core/price_level.h"
+#include "../../include/common/types.h"
+#include <iostream>
 #include <chrono>
 #include <algorithm>
-
 
 std::vector<Event> FIFOStrategy::batchedMatch(
         std::vector<SystemProtocol>& newBatch,
@@ -35,20 +35,22 @@ std::vector<Event> FIFOStrategy::match(
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
                 const SystemProtocol& cur = priceLevelQueue.getBestOrder();
-                int minVal = std::min(order.quantity, cur.quantity);
+                int16_t minVal = std::min(order.quantity, cur.quantity);
+                
                 order.quantity -= minVal;
                 
                 SystemProtocol updatedOrder = cur;
                 updatedOrder.quantity -= minVal;
-                
-                uint64_t now = std::chrono::system_clock::now().time_since_epoch().count();
+
+                uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
 
                 if (updatedOrder.quantity == 0) {
-                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::COMPLETED)});
+                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
                     priceLevelQueue.removeOrder(cur);
                 }
                 else {
-                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::UPDATED)});
+                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled)});
                     priceLevelQueue.updateOrder(updatedOrder);
                 }
             }
@@ -60,6 +62,10 @@ std::vector<Event> FIFOStrategy::match(
         }
         if (order.quantity > 0) {
             bids[order.price].addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added)});
+        }
+        else {
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
         }
     }
     else {
@@ -71,21 +77,22 @@ std::vector<Event> FIFOStrategy::match(
             auto& priceLevelQueue = it->second;
             while (!priceLevelQueue.empty() && order.quantity > 0) {
                 const SystemProtocol& cur = priceLevelQueue.getBestOrder();
-                int minVal = std::min(order.quantity, cur.quantity);
+                int16_t minVal = std::min(order.quantity, cur.quantity);
 
                 order.quantity -= minVal;
                 
                 SystemProtocol updatedOrder = cur;
                 updatedOrder.quantity -= minVal;
 
-                uint64_t now = std::chrono::system_clock::now().time_since_epoch().count();
+                uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
 
                 if (updatedOrder.quantity == 0) {
-                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::COMPLETED)});
+                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
                     priceLevelQueue.removeOrder(cur);
                 }
                 else {
-                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(EventType::UPDATED)});
+                    events.push_back({now, cur.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled)});
                     priceLevelQueue.updateOrder(updatedOrder);
                 }
             }
@@ -97,6 +104,10 @@ std::vector<Event> FIFOStrategy::match(
         }
         if (order.quantity > 0) {
             asks[order.price].addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added)});
+        }
+        else {
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
         }
     }
     return events;

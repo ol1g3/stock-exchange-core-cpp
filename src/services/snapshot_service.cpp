@@ -1,7 +1,12 @@
 #include "../../include/services/snapshot_service.h"
+
+#include <set>
 #include <vector>
 
 const int maxSnapshotNumber = 1000;
+std::mutex SnapshotService::snapshotMutex;
+
+SnapshotService::SnapshotService() : running(false) {}
 
 bool SnapshotService::start() {
     running = true;
@@ -26,7 +31,9 @@ bool SnapshotService::isRunning() {
 void SnapshotService::process(BatchSystemProtocol batch) {
     std::lock_guard<std::mutex> lock(snapshotMutex);
     batchSnapshots.push(batch);
-    if (batchSnapshots.size() > maxSnapshotNumber) batchSnapshots.pop();
+    if (static_cast<int>(batchSnapshots.size()) > maxSnapshotNumber) {
+        batchSnapshots.pop();
+    }
 }
 
 void SnapshotService::run() {
@@ -48,6 +55,9 @@ std::vector<BatchSystemProtocol> SnapshotService::getSnapshots(uint64_t seqNumbe
     while (!batchSnapshots.empty()) {
         const BatchSystemProtocol& batch = batchSnapshots.front();
         uint64_t batchSeqNumber = batch.get_message(0).seq_number;
+        if (batchSeqNumber < seqNumberFrom) continue;
+        if (batchSeqNumber > seqNumberTo) break;
+        result.push_back(batch);
         batchSnapshots.pop();
     }
     return result;

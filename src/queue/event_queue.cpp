@@ -8,7 +8,6 @@ static std::mutex queueMutex;
 bool EventQueue::push(const Event& event) {
     std::lock_guard<std::mutex> lock(queueMutex);
     queue.push(event);
-    std::cout << "EventQueue: Pushed event " << event.orderId << std::endl;
     return true;
 }
 
@@ -19,10 +18,10 @@ void EventQueue::addConsumer(std::unique_ptr<ServiceInterface> consumer) {
 Event EventQueue::poll() {
     std::lock_guard<std::mutex> lock(queueMutex);
     if (queue.empty()) {
-        return Event{};
+        return Event{0, UINT32_MAX, 0}; // Invalid event marker
     }
+
     Event event = queue.front();
     queue.pop();
-    std::cout << "EventQueue: Polled event " << event.orderId << std::endl;
     return event;
 }

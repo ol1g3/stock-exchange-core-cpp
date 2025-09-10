@@ -12,6 +12,6 @@ public:
         std::vector<SystemProtocol>& newBatch,
         std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
         std::map<uint64_t, PriceLevel>& asks
-    );
+    ) override;
     ~FIFOStrategy() override = default;
 };

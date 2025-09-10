@@ -34,6 +34,7 @@ int main(int argc, char const *argv[]) {
     Client client(orderEntryGateway);
     notificationService->addClient(client);
     
+    TradeNotificationService* notificationPtr = notificationService.get();
     eventQueue.addConsumer(std::move(notificationService));
     
     // Create orders
@@ -47,5 +48,14 @@ int main(int argc, char const *argv[]) {
     orderEntryGateway.stop();
     
     std::cout << "Exchange shutting down." << std::endl;
+
+    orderEntryGateway.stop();
+    retransmissionService.stop();
+    
+    if (notificationPtr) {
+        notificationPtr->stop();
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     return 0;
 }
