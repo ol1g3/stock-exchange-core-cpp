@@ -104,6 +104,18 @@ Client 1 received notification: Order 2 (timestamp: 1757532926622735) status: Pa
 Exchange shutting down.
 ```
 
+### Results of performance tests for a single thread:
+
+```
+=== Single Thread Throughput ===
+Throughput: 403452.21 orders/sec
+Total Orders: 10000 orders
+Duration: 0.02 seconds
+Avg Latency: 2.29 μs
+P95 Latency: 0.00 μs
+P99 Latency: 55.00 μ
+```
+
 ## Next Steps
 
 - Multiple instrument support with dynamic order book allocation
