@@ -87,6 +87,15 @@ make perf
 make clean
 ```
 
+## Alternative setup using Docker
+
+```bash
+docker build -t stock-exchange-core
+docker run --rm stock-exchange-core
+docker run --rm stock-exchange-core ./bin/unit_tests # to run unit tests
+docker run --rm stock-exchange-core ./bin/perf_tests # to run performance tests
+```
+
 ### Sample Output (of the current main.cpp)
 
 ```
