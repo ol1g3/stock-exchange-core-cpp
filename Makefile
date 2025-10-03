@@ -15,7 +15,7 @@ DEPS := $(OBJS:.o=.d)
 
 LIB_OBJS := $(filter-out $(OBJ_DIR)/main.o, $(OBJS))
 
-PERF_TARGET := $(BIN_DIR)/perf_runner
+PERF_TARGET := $(BIN_DIR)/perf_tests
 PERF_SRCS := $(shell find $(PERF_DIR) -name '*.cpp' 2>/dev/null)
 PERF_OBJS := $(patsubst $(PERF_DIR)/%.cpp,$(OBJ_DIR)/$(PERF_DIR)/%.o,$(PERF_SRCS))
 PERF_DEPS := $(PERF_OBJS:.o=.d)
