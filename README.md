@@ -35,7 +35,7 @@ Modern financial exchanges need to process hundreds of thousands of orders per s
 
 1. **Three-Tier Protocol Architecture**: [`ClientProtocol`](include/common/message.h) (24 bytes) carries minimal order data over the network, [`SystemProtocol`](include/common/message.h) (44 bytes) adds sequencing and integrity metadata for internal processing, and [`BatchSystemProtocol`](include/common/message.h) (1000 bytes) aggregates multiple orders for efficient bulk operations and reduced system calls.
 
-2. **Dual-Strategy Price Levels**: The [`PriceLevel`](include/core/price_level.h) class supports both time-priority (FIFO) and size-priority (Pro-Rata) matching within the same data structure, allowing runtime switching between matching algorithms.
+2. **Dual-Strategy Price Levels**: The [`PriceLevel`](include/core/price_level.h) class supports both time-priority (FIFO) and size-priority (Pro-Rata) matching, allowing flexibility in match execution
 
 3. **Batch Protocol**: The [`BatchSystemProtocol`](include/common/message.h) uses a fixed 1000-byte array with inline serialization, enabling efficient batching.
 
@@ -123,7 +123,7 @@ Exchange shutting down.
 Throughput: 403452.21 orders/sec
 Total Orders: 10000 orders
 Duration: 0.02 seconds
-Avg Latency: 2.29 μs
-P95 Latency: 0.00 μs
-P99 Latency: 55.00 μ
+Avg Latency: 2.9 μs
+P95 Latency: 0.55 μs
+P99 Latency: 57.00 μ
 ```
