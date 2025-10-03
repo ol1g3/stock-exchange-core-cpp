@@ -103,16 +103,18 @@ docker run --rm stock-exchange-core ./bin/perf_tests # to run performance tests
 
 ```
 Initializing exchange...
-Client 1 sending BUY order: 4 at price 98
-Client 1 sending SELL order: 33 at price 98
-Client 1 sending BUY order: 60 at price 98
+Client 1 sending BUY order: 9 at price 98
+Client 2 sending SELL order: 10 at price 98
+Client 3 sending SELL order: 44 at price 98
 Processing final batch of 3 orders before shutdown
 TradeNotificationService: Processing event 1
-Client 1 received notification: Order 1 (timestamp: 1757532926622733) status: Partially filled and added
-TradeNotificationService: Processing event 1
-Client 1 received notification: Order 1 (timestamp: 1757532927651177) status: Filled
+Client 1 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
+Client 2 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
+Client 3 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
 TradeNotificationService: Processing event 2
-Client 1 received notification: Order 2 (timestamp: 1757532926622735) status: Partially filled and added
+Client 1 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
+Client 2 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
+Client 3 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
 Exchange shutting down.
 ```
 

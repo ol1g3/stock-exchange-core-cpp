@@ -32,8 +32,8 @@ int main(int argc, char const *argv[]) {
     orderEntryGateway.start();
     
     std::vector<Client> clients = std::vector<Client>();
-    clients.reserve(5);
-    for (int i = 0;i < 5;i ++) {
+    clients.reserve(3);
+    for (int i = 0;i < 3;i ++) {
         Client client = Client(orderEntryGateway);
         clients.emplace_back(client);
         notificationService->addClient(client);
