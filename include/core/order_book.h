@@ -14,8 +14,8 @@ private:
     std::unique_ptr<MatchingStrategy> strategy;
     std::map<uint64_t, PriceLevel, std::greater<uint64_t>> bids;
     std::map<uint64_t, PriceLevel> asks;
-    static inline std::atomic<int> expectedTransactionNum{0};
-    static inline std::atomic<int> lastProcessedSeqNum{1};
+    static inline std::atomic<int> expectedTransactionNum{1};
+    static inline std::atomic<int> lastProcessedSeqNum{0};
 public:
     OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> strategy);
     bool process(const BatchSystemProtocol& message);
