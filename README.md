@@ -75,13 +75,16 @@ The system supports pluggable matching algorithms:
 
 ```bash
 # Build the main exchange
-make all
+make build
 
 # Run the exchange
 make run
 
 # Run performance tests
 make perf
+
+# Run performance tests
+make test
 
 # Clean build artifacts
 make clean
