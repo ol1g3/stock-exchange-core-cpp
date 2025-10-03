@@ -14,7 +14,8 @@ private:
     std::unique_ptr<MatchingStrategy> strategy;
     std::map<uint64_t, PriceLevel, std::greater<uint64_t>> bids;
     std::map<uint64_t, PriceLevel> asks;
-
+    static inline std::atomic<int> expectedTransactionNum{0};
+    static inline std::atomic<int> lastProcessedSeqNum{1};
 public:
     OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> strategy);
     bool process(const BatchSystemProtocol& message);
@@ -35,7 +36,7 @@ public:
 
 class OrderBookPool {
 private:
-    std::vector<std::unique_ptr<OrderBook>> pool; // Use unique_ptr instead
+    std::vector<std::unique_ptr<OrderBook>> pool;
     std::unordered_map<uint32_t, uint32_t> instrumentToBookIndex;
 public:
     OrderBookPool() = default;

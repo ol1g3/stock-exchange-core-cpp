@@ -48,6 +48,14 @@ bool OrderEntryGateway::acceptOrder(const ClientProtocol& order) {
         return false;
     }
 
+    if (order.price <= 0 || order.quantity <= 0 || order.userId <= 0) {
+        std::cerr << "Invalid order rejected: " 
+          << (order.price <= 0 ? "Invalid price " : "")
+          << (order.quantity <= 0 ? "Invalid quantity " : "") 
+          << std::endl;
+        return false;
+    }
+
     static int transactionCounter = 1;
     SystemProtocol systemOrder = translate(order, transactionCounter++);
     

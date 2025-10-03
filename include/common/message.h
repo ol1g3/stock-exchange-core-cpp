@@ -2,9 +2,10 @@
 #include <iostream>
 #include <array>
 #include <atomic>
+#include <cstring>
+#include <vector>
 
 //! @brief Defines protocol structures and serialization for client and system messages in the exchange.
-static std::atomic<uint64_t> transactionId{0};
 
 struct ClientProtocol{ // 24 bytes
     uint32_t userId;
@@ -137,6 +138,7 @@ struct SystemProtocol{ // 44 bytes
 struct BatchSystemProtocol{ // 1000 bytes
     // first byte contains the size of the batch
     std::array<uint8_t, 1000> batch;
+    static inline std::atomic<uint64_t> transactionId;
 
     BatchSystemProtocol() : 
         batch() {}
@@ -211,7 +213,7 @@ inline bool verifyChecksum(const SystemProtocol& message) {
 }
 
 inline SystemProtocol translate(ClientProtocol message, int seq_number) {
-    uint64_t currentTransactionId = transactionId.fetch_add(1);
+    uint64_t currentTransactionId = BatchSystemProtocol::transactionId.fetch_add(1);
     SystemProtocol dummy = SystemProtocol (
         message.userId,
         message.side,

@@ -31,16 +31,19 @@ int main(int argc, char const *argv[]) {
     OrderEntryGateway orderEntryGateway(orderBookPool); 
     orderEntryGateway.start();
     
-    Client client(orderEntryGateway);
-    notificationService->addClient(client);
+    std::vector<Client> clients = std::vector<Client>();
+    clients.reserve(5);
+    for (int i = 0;i < 5;i ++) {
+        Client client = Client(orderEntryGateway);
+        clients.emplace_back(client);
+        notificationService->addClient(client);
+    }
     
     TradeNotificationService* notificationPtr = notificationService.get();
     eventQueue.addConsumer(std::move(notificationService));
     
     // Create orders
-    client.createOrder();
-    client.createOrder();
-    client.createOrder();
+    for (Client client : clients) client.createOrder();
     
     std::this_thread::sleep_for(std::chrono::seconds(1));
     

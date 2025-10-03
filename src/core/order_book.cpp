@@ -9,9 +9,6 @@ OrderBook::OrderBook(EventQueue& eventQueue, std::unique_ptr<MatchingStrategy> s
     : eventQueue(eventQueue), strategy(std::move(strategy)) {
 }
 
-static int expectedTransactionNum = 1;
-static int lastProcessedSeqNum = 0;
-
 bool OrderBook::process(const BatchSystemProtocol& batch) {
     if (!strategy) {
         return false;
@@ -21,8 +18,8 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
         return true;
     }
     
-    if (static_cast<int>(messages.at(0).seq_number) > lastProcessedSeqNum + 1) {
-        std::vector<BatchSystemProtocol> lostBatches = requestSnapshots(lastProcessedSeqNum + 1, static_cast<int>(messages.at(0).seq_number));
+    if (static_cast<int>(messages.at(0).seq_number) > OrderBook::lastProcessedSeqNum + 1) {
+        std::vector<BatchSystemProtocol> lostBatches = requestSnapshots(OrderBook::lastProcessedSeqNum + 1, static_cast<int>(messages.at(0).seq_number));
         messages.clear();
         for (const auto& batch : lostBatches) {
             for(const auto& order: batch.get_all_messages()) {
@@ -45,7 +42,7 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
         eventQueue.push(event);
     }
     
-    lastProcessedSeqNum = static_cast<int>(messages.back().seq_number);
+    OrderBook::lastProcessedSeqNum = static_cast<int>(messages.back().seq_number);
     return true;
 }
 
