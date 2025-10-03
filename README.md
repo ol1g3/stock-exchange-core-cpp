@@ -1,10 +1,10 @@
 # Stock Exchange Core (C++)
 
-A high-performance, simplified stock exchange core implementation written in C++20. This project demonstrates core concepts of financial trading systems including order matching, market data distribution, and fault tolerance mechanisms.
+A high-performance, simplified stock exchange core implementation written in C++20.
 
 ## Problem Statement
 
-Modern financial exchanges need to process tens of thousands of orders per second with microsecond latency while maintaining data consistency and fault tolerance. This project tackles the fundamental challenges:
+Modern financial exchanges need to process hundreds of thousands of orders per second with microsecond latency while maintaining data consistency and fault tolerance. This project tackles the fundamental challenges:
 
 - **Order Matching**: Efficiently match buy and sell orders using different algorithms
 - **Market Data**: Real-time distribution of quotes and trade notifications
@@ -26,7 +26,7 @@ Modern financial exchanges need to process tens of thousands of orders per secon
 │   ├── client/         # Client implementation
 │   └── queue/          # Event processing
 ├── include/            # Header files
-├── tests/              # Unit tests
+├── tests/              # Unit and performance tests
 └── Makefile           # Build configuration
 ```
 
@@ -37,11 +37,11 @@ Modern financial exchanges need to process tens of thousands of orders per secon
 
 2. **Dual-Strategy Price Levels**: The [`PriceLevel`](include/core/price_level.h) class supports both time-priority (FIFO) and size-priority (Pro-Rata) matching within the same data structure, allowing runtime switching between matching algorithms.
 
-3. **Batch Protocol with Zero-Copy Design**: The [`BatchSystemProtocol`](include/common/message.h) uses a fixed 1000-byte array with inline serialization, enabling efficient batching without dynamic allocations in the hot path.
+3. **Batch Protocol**: The [`BatchSystemProtocol`](include/common/message.h) uses a fixed 1000-byte array with inline serialization, enabling efficient batching.
 
 4. **Singleton Services with Thread Safety**: Services like [`RetransmissionService`](include/services/retransmission_service.h) use the singleton pattern with proper mutex protection, ensuring system-wide consistency while avoiding global state issues.
 
-5. **Sequence Number Gap Detection**: The [`OrderBook::process`](src/core/order_book.cpp) method implements intelligent gap detection, automatically requesting retransmissions or snapshots based on sequence number discontinuities.
+5. **Transaction Id and Sequence Number Gap Detection**: The [`OrderBook::process`](src/core/order_book.cpp) method implements intelligent gap detection, automatically requesting retransmissions or snapshots based on sequence number discontinuities.
 
 6. **Event-Driven Architecture**: The [`EventQueue`](include/queue/event_queue.h) decouples order processing from client notifications, allowing for asynchronous trade reporting without blocking the matching engine.
 
@@ -127,10 +127,3 @@ Avg Latency: 2.29 μs
 P95 Latency: 0.00 μs
 P99 Latency: 55.00 μ
 ```
-
-## Next Steps
-
-- Multiple instrument support with dynamic order book allocation
-- Real-time risk management integration
-- Network layer for remote client connectivity
-- Monitoring and metrics collection (latency histograms, throughput)
