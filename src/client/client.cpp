@@ -7,6 +7,10 @@ int Client::next_id = 1;
 Client::Client(OrderEntryGateway& gateway) 
     : id(next_id++), orderEntryGateway(gateway) {}
 
+int Client::getId() const {
+    return id;
+}
+
 bool Client::operator==(const Client& b) const {
     return this->id == b.id;
 }

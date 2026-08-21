@@ -57,7 +57,10 @@ bool OrderEntryGateway::acceptOrder(const ClientProtocol& order) {
     }
 
     static int transactionCounter = 1;
-    SystemProtocol systemOrder = translate(order, transactionCounter++);
+    ClientProtocol stamped = order;
+    stamped.timestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+    SystemProtocol systemOrder = translate(stamped, transactionCounter++);
     
     std::lock_guard<std::mutex> lock(batchMutex);
     

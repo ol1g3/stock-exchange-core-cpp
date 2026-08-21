@@ -37,6 +37,10 @@ bool OrderBook::process(const BatchSystemProtocol& batch) {
             expectedTransactionNum++;
         }
     }
+    if (messages.empty()) {
+        return false;
+    }
+
     std::vector<Event> events = strategy->batchedMatch(messages, bids, asks);
     for (const auto& event : events) {
         eventQueue.push(event);

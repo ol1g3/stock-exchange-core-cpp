@@ -8,6 +8,7 @@ private:
     OrderEntryGateway& orderEntryGateway;
 public:
     Client(OrderEntryGateway& orderEntryGateway);
+    int getId() const;
     bool createOrder();
     void getNotification(const Event& event);
     void receiveQuoteUpdate(QuoteSummary summary);

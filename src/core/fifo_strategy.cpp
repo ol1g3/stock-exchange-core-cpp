@@ -45,11 +45,11 @@ std::vector<Event> FIFOStrategy::match(
             else it++;
         }
         if (order.quantity > 0) {
-            bids[order.price].addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added)});
+            bids.try_emplace(order.price, levelType()).first->second.addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
         }
         else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
         }
     }
     else {
@@ -82,11 +82,11 @@ std::vector<Event> FIFOStrategy::match(
             else it++;
         }
         if (order.quantity > 0) {
-            asks[order.price].addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added)});
+            asks.try_emplace(order.price, levelType()).first->second.addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
         }
         else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
         }
     }
     return events;

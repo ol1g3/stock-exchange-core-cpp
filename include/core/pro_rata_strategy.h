@@ -9,5 +9,10 @@ public:
         std::map<uint64_t, PriceLevel>& asks
     ) override;
 
+    OrderComparisonType levelType() const override;
+
     ~ProRataStrategy() override = default;
+
+private:
+    int16_t allocate(std::vector<Event>& events, PriceLevel& level, int16_t incoming);
 };

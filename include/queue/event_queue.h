@@ -2,6 +2,7 @@
 #include <queue>
 #include <vector>
 #include <memory>
+#include <optional>
 #include "../services/service_interface.h"
 #include "../common/types.h"
 
@@ -15,5 +16,5 @@ public:
     // may be useful for later
     void addConsumer(std::unique_ptr<ServiceInterface> consumer);
     bool push(const Event& event);
-    Event poll();
+    std::optional<Event> poll();
 };

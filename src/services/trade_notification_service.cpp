@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <thread>
 #include <atomic>
+#include "../../include/queue/event_queue.h"
 
 TradeNotificationService::TradeNotificationService() : queue(nullptr) {}
 
@@ -34,7 +35,20 @@ bool TradeNotificationService::stop() {
     if (processingThread.joinable()) {
         processingThread.join();
     }
+    if (queue) {
+        while (std::optional<Event> event = queue->poll()) {
+            dispatch(*event);
+        }
+    }
     return true;
+}
+
+void TradeNotificationService::dispatch(const Event& event) {
+    for (auto& client : clients) {
+        if (static_cast<uint32_t>(client.getId()) == event.userId) {
+            client.getNotification(event);
+        }
+    }
 }
 
 bool TradeNotificationService::isRunning() {
@@ -44,15 +58,12 @@ bool TradeNotificationService::isRunning() {
 bool TradeNotificationService::run() {
     while (running) {
         if (queue) {
-            Event event = queue->poll();
-            if (event.orderId > 0 && event.orderId != UINT32_MAX) {
-                std::cout << "TradeNotificationService: Processing event " << event.orderId << std::endl;
-                for (auto& client : clients) {
-                    client.getNotification(event);
-                }
+            while (std::optional<Event> event = queue->poll()) {
+                std::cout << "TradeNotificationService: Processing event " << event->orderId << std::endl;
+                dispatch(*event);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return true;
 }

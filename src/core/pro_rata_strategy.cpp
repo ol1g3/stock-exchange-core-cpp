@@ -1,17 +1,68 @@
 #include "../../include/core/pro_rata_strategy.h"
 #include "../../include/common/types.h"
 #include <algorithm>
+#include <vector>
+
+OrderComparisonType ProRataStrategy::levelType() const {
+    return OrderComparisonType::SIZE;
+}
+
+int16_t ProRataStrategy::allocate(std::vector<Event>& events, PriceLevel& level, int16_t incoming) {
+    if (incoming <= 0) return 0;
+
+    std::vector<SystemProtocol> resting = level.getAllOrders();
+    if (resting.empty()) return 0;
+
+    int32_t total = 0;
+    for (const auto& order : resting) total += order.quantity;
+    if (total <= 0) return 0;
+
+    if (incoming >= total) {
+        for (const auto& order : resting) processFilledOrder(events, order, level);
+        return static_cast<int16_t>(total);
+    }
+
+    std::vector<int16_t> allocation(resting.size(), 0);
+    int32_t handedOut = 0;
+    for (size_t i = 0; i < resting.size(); i++) {
+        allocation[i] = static_cast<int16_t>(
+            static_cast<int64_t>(incoming) * resting[i].quantity / total);
+        handedOut += allocation[i];
+    }
+
+    for (size_t i = 0; handedOut < incoming; i = (i + 1) % resting.size()) {
+        if (allocation[i] < resting[i].quantity) {
+            allocation[i]++;
+            handedOut++;
+        }
+    }
+
+    for (size_t i = 0; i < resting.size(); i++) {
+        if (allocation[i] == 0) continue;
+
+        SystemProtocol updatedOrder = resting[i];
+        updatedOrder.quantity = static_cast<int16_t>(updatedOrder.quantity - allocation[i]);
+
+        if (updatedOrder.quantity == 0) {
+            processFilledOrder(events, resting[i], level);
+        }
+        else {
+            processPartiallyFilledOrder(events, resting[i], updatedOrder, level);
+        }
+    }
+    return incoming;
+}
 
 std::vector<Event> ProRataStrategy::match(
         SystemProtocol& newOrder,
         std::map<uint64_t, PriceLevel, std::greater<uint64_t>>& bids,
         std::map<uint64_t, PriceLevel>& asks
     ) {
-    
+
     if (!validateOrder(newOrder)) {
         return {};
     }
-    
+
     std::vector<Event> events;
     SystemProtocol order = newOrder;
 
@@ -21,35 +72,20 @@ std::vector<Event> ProRataStrategy::match(
                 break;
             }
 
-            auto& priceLevelQueue = it->second;
-            while (!priceLevelQueue.empty() && order.quantity > 0) {
-                const SystemProtocol& cur = priceLevelQueue.getBestOrder();
-                int16_t minVal = std::min(order.quantity, cur.quantity);
+            int16_t filled = allocate(events, it->second, order.quantity);
+            order.quantity = static_cast<int16_t>(order.quantity - filled);
 
-                order.quantity -= minVal;
-                
-                SystemProtocol updatedOrder = cur;
-                updatedOrder.quantity -= minVal;
-
-                if (updatedOrder.quantity == 0) {
-                    processFilledOrder(events, cur, priceLevelQueue);
-                }
-                else {
-                    processPartiallyFilledOrder(events, cur, updatedOrder, priceLevelQueue);
-                }
-            }
-
-            if (priceLevelQueue.empty()) {
+            if (it->second.empty()) {
                 it = asks.erase(it);
             }
             else it++;
         }
         if (order.quantity > 0) {
-            bids[order.price].addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::New)});
+            bids.try_emplace(order.price, levelType()).first->second.addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
         }
         else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
         }
     }
     else {
@@ -58,35 +94,20 @@ std::vector<Event> ProRataStrategy::match(
                 break;
             }
 
-            auto& priceLevelQueue = it->second;
-            while (!priceLevelQueue.empty() && order.quantity > 0) {
-                const SystemProtocol& cur = priceLevelQueue.getBestOrder();
-                int16_t minVal = std::min(order.quantity, cur.quantity);
+            int16_t filled = allocate(events, it->second, order.quantity);
+            order.quantity = static_cast<int16_t>(order.quantity - filled);
 
-                order.quantity -= minVal;
-                
-                SystemProtocol updatedOrder = cur;
-                updatedOrder.quantity -= minVal;
-
-                if (updatedOrder.quantity == 0) {
-                    processFilledOrder(events, cur, priceLevelQueue);
-                }
-                else {
-                    processPartiallyFilledOrder(events, cur, updatedOrder, priceLevelQueue);
-                }
-            }
-
-            if (priceLevelQueue.empty()) {
+            if (it->second.empty()) {
                 it = bids.erase(it);
             }
             else it++;
         }
         if (order.quantity > 0) {
-            asks[order.price].addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::New)});
+            asks.try_emplace(order.price, levelType()).first->second.addOrder(order);
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
         }
         else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
+            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
         }
     }
     return events;

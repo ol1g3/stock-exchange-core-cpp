@@ -18,6 +18,8 @@ private:
     std::thread processingThread;
     std::atomic<bool> running{false};
     EventQueue* queue;
+
+    void dispatch(const Event& event);
 public:
     TradeNotificationService();
 

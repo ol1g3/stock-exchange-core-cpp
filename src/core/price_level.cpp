@@ -26,9 +26,9 @@ void PriceLevel::removeOrder(const SystemProtocol& order) {
     }
 }
 
-void PriceLevel::updateOrder(const SystemProtocol& order) {
-    removeOrder(order);
-    addOrder(order);
+void PriceLevel::updateOrder(const SystemProtocol& oldOrder, const SystemProtocol& newOrder) {
+    removeOrder(oldOrder);
+    addOrder(newOrder);
 }
 
 SystemProtocol PriceLevel::getBestOrder() const {

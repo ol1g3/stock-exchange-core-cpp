@@ -25,6 +25,8 @@ public:
         std::map<uint64_t, PriceLevel>& asks
     );
     
+    virtual OrderComparisonType levelType() const;
+
     virtual ~MatchingStrategy() = default;
 
 protected:

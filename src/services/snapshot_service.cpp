@@ -55,7 +55,10 @@ std::vector<BatchSystemProtocol> SnapshotService::getSnapshots(uint64_t seqNumbe
     while (!batchSnapshots.empty()) {
         const BatchSystemProtocol& batch = batchSnapshots.front();
         uint64_t batchSeqNumber = batch.get_message(0).seq_number;
-        if (batchSeqNumber < seqNumberFrom) continue;
+        if (batchSeqNumber < seqNumberFrom) {
+            batchSnapshots.pop();
+            continue;
+        }
         if (batchSeqNumber > seqNumberTo) break;
         result.push_back(batch);
         batchSnapshots.pop();

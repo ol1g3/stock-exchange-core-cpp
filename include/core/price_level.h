@@ -14,13 +14,15 @@ enum struct OrderComparisonType {
 struct OrderSizeComparator {
     bool operator()(const SystemProtocol& a, const SystemProtocol& b) const {
         if(a.quantity != b.quantity) return a.quantity > b.quantity;
-        return a.timestamp < b.timestamp;
+        if(a.timestamp != b.timestamp) return a.timestamp < b.timestamp;
+        return a.transaction_id < b.transaction_id;
     }
 };
 
 struct OrderTimeComparator {
     bool operator()(const SystemProtocol& a, const SystemProtocol& b) const {
-        return a.timestamp < b.timestamp;
+        if(a.timestamp != b.timestamp) return a.timestamp < b.timestamp;
+        return a.transaction_id < b.transaction_id;
     }
 };
 
@@ -38,7 +40,7 @@ public:
     bool empty() const;
     void addOrder(const SystemProtocol& order);
     void removeOrder(const SystemProtocol& order);
-    void updateOrder(const SystemProtocol& order);
+    void updateOrder(const SystemProtocol& oldOrder, const SystemProtocol& newOrder);
     
     SystemProtocol getBestOrder() const;
     

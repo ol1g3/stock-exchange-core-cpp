@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 
 enum struct EventType {
@@ -17,9 +18,10 @@ struct Event {
     uint64_t timestamp;
     uint64_t orderId;
     OrderStatus status;
+    uint32_t userId;
 
-    Event() : timestamp(0), orderId(0), status(OrderStatus::New) {}
-    Event(uint64_t timestamp, uint64_t orderId, uint8_t status) : timestamp(timestamp), orderId(orderId), status(static_cast<OrderStatus>(status)) {}
+    Event() : timestamp(0), orderId(0), status(OrderStatus::New), userId(0) {}
+    Event(uint64_t timestamp, uint64_t orderId, uint8_t status, uint32_t userId) : timestamp(timestamp), orderId(orderId), status(static_cast<OrderStatus>(status)), userId(userId) {}
 };
 
 struct QuoteSummary {

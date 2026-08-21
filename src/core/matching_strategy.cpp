@@ -16,6 +16,10 @@ std::vector<Event> MatchingStrategy::batchedMatch(
     return events;
 }
 
+OrderComparisonType MatchingStrategy::levelType() const {
+    return OrderComparisonType::TIME;
+}
+
 bool MatchingStrategy::validateOrder(const SystemProtocol& order) const {
     if (order.price <= 0) return false;
     if (order.quantity <= 0) return false;
@@ -31,9 +35,9 @@ void MatchingStrategy::processFilledOrder(
     PriceLevel& priceLevel
 ) {
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+        std::chrono::steady_clock::now().time_since_epoch()).count();
         
-    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::Filled)});
+    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), currentOrder.userId});
     priceLevel.removeOrder(currentOrder);
 }
 
@@ -44,8 +48,8 @@ void MatchingStrategy::processPartiallyFilledOrder(
     PriceLevel& priceLevel
 ) {
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+        std::chrono::steady_clock::now().time_since_epoch()).count();
         
-    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled)});
-    priceLevel.updateOrder(updatedOrder);
+    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled), currentOrder.userId});
+    priceLevel.updateOrder(currentOrder, updatedOrder);
 }
