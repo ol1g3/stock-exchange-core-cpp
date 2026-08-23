@@ -23,7 +23,7 @@ Modern financial exchanges need to process hundreds of thousands of orders per s
 ├── src/
 │   ├── core/           # Order matching and book management
 │   ├── services/       # Exchange services (gateway, quotes, etc.)
-│   ├── client/         # Client implementation
+│   ├── client/         # Client implementations (market maker, noise trader)
 │   └── queue/          # Event processing
 ├── include/            # Header files
 ├── tests/              # Unit and performance tests
@@ -33,11 +33,11 @@ Modern financial exchanges need to process hundreds of thousands of orders per s
 ## Key Features & Design Decisions
 
 
-1. **Three-Tier Protocol Architecture**: [`ClientProtocol`](include/common/message.h) (24 bytes) carries minimal order data over the network, [`SystemProtocol`](include/common/message.h) (44 bytes) adds sequencing and integrity metadata for internal processing, and [`BatchSystemProtocol`](include/common/message.h) (1000 bytes) aggregates multiple orders for efficient bulk operations and reduced system calls.
+1. **Three-Tier Protocol Architecture**: [`ClientProtocol`](include/common/message.h) (24 bytes on the wire) carries minimal order data over the network, [`SystemProtocol`](include/common/message.h) (44 bytes on the wire) adds sequencing and integrity metadata for internal processing, and [`BatchSystemProtocol`](include/common/message.h) (1000 bytes) aggregates multiple orders for efficient bulk operations and reduced system calls.
 
 2. **Dual-Strategy Price Levels**: The [`PriceLevel`](include/core/price_level.h) class supports both time-priority (FIFO) and size-priority (Pro-Rata) matching, allowing flexibility in match execution
 
-3. **Batch Protocol**: The [`BatchSystemProtocol`](include/common/message.h) uses a fixed 1000-byte array with inline serialization, enabling efficient batching.
+3. **Batch Protocol**: The [`BatchSystemProtocol`](include/common/message.h) uses a fixed 1000-byte array with inline serialization, holding up to 22 orders per batch.
 
 4. **Singleton Services with Thread Safety**: Services like [`RetransmissionService`](include/services/retransmission_service.h) use the singleton pattern with proper mutex protection, ensuring system-wide consistency while avoiding global state issues.
 
@@ -52,6 +52,11 @@ The system supports pluggable matching algorithms:
 - **FIFO Strategy** ([`FIFOStrategy`](include/core/fifo_strategy.h)): Time-priority matching (first-in-first-out)
 - **Pro-Rata Strategy** ([`ProRataStrategy`](include/core/pro_rata_strategy.h)): Size-weighted allocation for large orders
 
+Every order carries a time in force in [`ClientProtocol::timeInForce`](include/common/message.h):
+
+- **GTC** (good till cancelled): any unfilled remainder rests on the book
+- **IOC** (immediate or cancel): any unfilled remainder is cancelled rather than rested, and reported back as `OrderStatus::Cancelled`
+
 ### 🔄 Fault Tolerance
 
 - **Message Retransmission**: Automatic detection and recovery of lost messages
@@ -64,12 +69,28 @@ The system supports pluggable matching algorithms:
 - **Trade Notifications**: Asynchronous client notifications for order status changes
 - **Market Depth**: Top-of-book and deep market data aggregation
 
+### 🤖 Simulation Participants
+
+`main.cpp` runs a closed-loop simulation: several noise traders trading against a single market maker. Both derive from the abstract [`Client`](include/client/client.h) interface (`createOrder`, `getNotification`, `receiveQuoteUpdate`).
+
+**[`MarketMaker`](include/client/market_maker.h)** quotes a two-sided market. Each round it posts a GTC bid and ask at `centre ± halfSpread`, where `centre` is its fair value skewed against its own inventory:
+
+```
+centre = fairValue - (halfSpread * inventory / maxInventory)
+```
+
+A long position shades both quotes down to attract sellers; a short position shades them up. It stops bidding once inventory reaches `+maxInventory` and stops offering at `-maxInventory`, which bounds its risk. Fills come back as execution reports through [`TradeNotificationService`](include/services/trade_notification_service.h), carrying the traded price, quantity and side; the maker updates inventory and cash from each one and requotes when a fill arrives or its target price moves.
+
+**[`NoiseTrader`](include/client/noise_trader.h)** supplies random order flow. It picks a side and size at random and prices *through* the reference so its orders are marketable, taking liquidity rather than posting it. Orders are sent IOC, so anything that cannot fill immediately is cancelled instead of resting on the book.
+
+Because the market maker is the only participant posting resting liquidity, it is on one side of every trade, and its profit is the quoted spread multiplied by the volume it trades.
+
 ## Building and Running
 
 ### Prerequisites
 
 - C++20 compatible compiler (GCC 10+ or Clang 12+)
-- Linux environment
+- Linux or macOS
 
 ### Build Commands
 
@@ -83,7 +104,7 @@ make run
 # Run performance tests
 make perf
 
-# Run performance tests
+# Run unit tests
 make test
 
 # Clean build artifacts
@@ -93,7 +114,7 @@ make clean
 ## Alternative setup using Docker
 
 ```bash
-docker build -t stock-exchange-core
+docker build -t stock-exchange-core .
 docker run --rm stock-exchange-core
 docker run --rm stock-exchange-core ./bin/unit_tests # to run unit tests
 docker run --rm stock-exchange-core ./bin/perf_tests # to run performance tests
@@ -103,29 +124,37 @@ docker run --rm stock-exchange-core ./bin/perf_tests # to run performance tests
 
 ```
 Initializing exchange...
-Client 1 sending BUY order: 9 at price 98
-Client 2 sending SELL order: 10 at price 98
-Client 3 sending SELL order: 44 at price 98
-Processing final batch of 3 orders before shutdown
-TradeNotificationService: Processing event 1
-Client 1 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
-Client 2 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
-Client 3 received notification: Order 1 (timestamp: 1759532881458000) status: Partially filled and added
-TradeNotificationService: Processing event 2
-Client 1 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
-Client 2 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
-Client 3 received notification: Order 2 (timestamp: 1759532881458002) status: Partially filled and added
+Running 50 rounds: 4 noise traders + 1 market maker at reference price 10000
+Batch full (22 orders), processing
+... (9 batches)
+Processing final batch of 22 orders before shutdown
+
+=== Simulation complete ===
+NoiseTrader 1: sent 50, fills 21, shares 299, position -103, IOC cancelled 714
+NoiseTrader 2: sent 50, fills 15, shares 251, position -111, IOC cancelled 864
+NoiseTrader 3: sent 50, fills 13, shares 240, position 96, IOC cancelled 864
+NoiseTrader 4: sent 50, fills 13, shares 210, position 118, IOC cancelled 725
+MarketMaker 5: fills 62, shares 1000, inventory 0, cash 5000, mark-to-market PnL 5000
+
+net position across all participants: 0 (must be 0), shares reported by both sides: 2000 (must be even)
+
 Exchange shutting down.
 ```
 
+The market maker ends flat, so its entire PnL is spread capture: it bought 500 shares at 9995 and sold 500 at 10005, and 500 x 10 = 5000. The closing line is a conservation check — every share bought by someone was sold by someone else, so the net position across all participants must be exactly zero.
+
 ### Results of performance tests for a single thread:
+
+Measured with `make perf` on Darwin arm64, Apple clang 17:
 
 ```
 === Single Thread Throughput ===
-Throughput: 403452.21 orders/sec
+Throughput: 390732.47 orders/sec
 Total Orders: 10000 orders
-Duration: 0.02 seconds
-Avg Latency: 2.9 μs
-P95 Latency: 0.55 μs
-P99 Latency: 57.00 μ
+Duration: 0.03 seconds
+Avg Latency: 2.29 μs
+P95 Latency: 0.00 μs
+P99 Latency: 59.00 μs
 ```
+
+These figures measure [`OrderEntryGateway::acceptOrder`](src/services/order_entry_gateway.cpp) — the time to accept an order into the current batch, including the matching work that runs whenever a batch fills. They are not order-to-trade latency. The harness also truncates each sample to whole microseconds, so the many samples below 1 µs report as 0, which is why P95 reads 0.00 while the tail is still visible at P99.
