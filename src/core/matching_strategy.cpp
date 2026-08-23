@@ -37,7 +37,7 @@ void MatchingStrategy::processFilledOrder(
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
         
-    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), currentOrder.userId});
+    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), currentOrder.userId, currentOrder.price, currentOrder.quantity, currentOrder.side});
     priceLevel.removeOrder(currentOrder);
 }
 
@@ -50,6 +50,7 @@ void MatchingStrategy::processPartiallyFilledOrder(
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
         
-    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled), currentOrder.userId});
+    int16_t tradedQuantity = static_cast<int16_t>(currentOrder.quantity - updatedOrder.quantity);
+    events.push_back({now, currentOrder.transaction_id, static_cast<uint8_t>(OrderStatus::PartiallyFilled), currentOrder.userId, currentOrder.price, tradedQuantity, currentOrder.side});
     priceLevel.updateOrder(currentOrder, updatedOrder);
 }

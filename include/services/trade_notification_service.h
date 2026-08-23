@@ -14,7 +14,7 @@ struct SystemProtocol;
  */
 class TradeNotificationService : public ServiceInterface {
 private:
-    std::vector<Client> clients;
+    std::vector<Client*> clients;
     std::thread processingThread;
     std::atomic<bool> running{false};
     EventQueue* queue;
@@ -23,8 +23,8 @@ private:
 public:
     TradeNotificationService();
 
-    void addClient(Client c);
-    void notify(Client c, Event e);
+    void addClient(Client* c);
+    void notify(Client* c, const Event& e);
     void setEventQueue(EventQueue* eventQueue);
 
     ServiceType initialize();

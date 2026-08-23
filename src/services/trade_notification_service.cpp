@@ -7,13 +7,13 @@
 
 TradeNotificationService::TradeNotificationService() : queue(nullptr) {}
 
-void TradeNotificationService::addClient(Client c){
-    clients.push_back(c);
+void TradeNotificationService::addClient(Client* c){
+    if (c) clients.push_back(c);
 }
 
-void TradeNotificationService::notify(Client c, Event e){
+void TradeNotificationService::notify(Client* c, const Event& e){
     if(find(clients.begin(), clients.end(), c) == clients.end()) return;
-    c.getNotification(e);
+    c->getNotification(e);
 }
 
 ServiceType TradeNotificationService::getType() const {
@@ -44,9 +44,9 @@ bool TradeNotificationService::stop() {
 }
 
 void TradeNotificationService::dispatch(const Event& event) {
-    for (auto& client : clients) {
-        if (static_cast<uint32_t>(client.getId()) == event.userId) {
-            client.getNotification(event);
+    for (auto* client : clients) {
+        if (static_cast<uint32_t>(client->getId()) == event.userId) {
+            client->getNotification(event);
         }
     }
 }
@@ -59,7 +59,6 @@ bool TradeNotificationService::run() {
     while (running) {
         if (queue) {
             while (std::optional<Event> event = queue->poll()) {
-                std::cout << "TradeNotificationService: Processing event " << event->orderId << std::endl;
                 dispatch(*event);
             }
         }

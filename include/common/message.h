@@ -4,25 +4,27 @@
 #include <atomic>
 #include <cstring>
 #include <vector>
+#include "types.h"
 
 //! @brief Defines protocol structures and serialization for client and system messages in the exchange.
 
 struct ClientProtocol{ // 24 bytes
     uint32_t userId;
-    bool side, padding;
+    bool side;
+    uint8_t timeInForce;
     uint64_t price;
     int16_t quantity;
     uint64_t timestamp;
 
     ClientProtocol(uint32_t userId,
-        bool side, bool padding,
+        bool side, uint8_t timeInForce,
         uint64_t price,
         int16_t quantity,
         uint64_t timestamp) : 
         
         userId(userId),
         side(side),
-        padding(padding),
+        timeInForce(timeInForce),
         price(price),
         quantity(quantity),
         timestamp(timestamp) {}
@@ -30,7 +32,7 @@ struct ClientProtocol{ // 24 bytes
     ClientProtocol() :
         userId(0),
         side(true),
-        padding(true),
+        timeInForce(static_cast<uint8_t>(TimeInForce::GTC)),
         price(0),
         quantity(0),
         timestamp(0) {}
@@ -41,7 +43,7 @@ struct ClientProtocol{ // 24 bytes
         std::memcpy(bytes.data(), &userId, sizeof(userId));
 
         bytes[4] = side ? 1 : 0;
-        bytes[5] = padding ? 1 : 0;
+        bytes[5] = timeInForce;
 
         std::memcpy(bytes.data() + 6, &price, sizeof(price));
         std::memcpy(bytes.data() + 14, &quantity, sizeof(quantity));
@@ -54,7 +56,7 @@ struct ClientProtocol{ // 24 bytes
         ClientProtocol protocol;
         std::memcpy(&protocol.userId, bytes.data(), sizeof(protocol.userId));
         std::memcpy(&protocol.side, bytes.data() + 4, sizeof(protocol.side));
-        std::memcpy(&protocol.padding, bytes.data() + 5, sizeof(protocol.padding));
+        std::memcpy(&protocol.timeInForce, bytes.data() + 5, sizeof(protocol.timeInForce));
         std::memcpy(&protocol.price, bytes.data() + 6, sizeof(protocol.price));
         std::memcpy(&protocol.quantity, bytes.data() + 14, sizeof(protocol.quantity));
         std::memcpy(&protocol.timestamp, bytes.data() + 16, sizeof(protocol.timestamp));
@@ -65,7 +67,8 @@ struct ClientProtocol{ // 24 bytes
 
 struct SystemProtocol{ // 44 bytes
     uint32_t userId;
-    bool side, padding;
+    bool side;
+    uint8_t timeInForce;
     uint64_t price;
     int16_t quantity;
     uint64_t timestamp;
@@ -74,7 +77,7 @@ struct SystemProtocol{ // 44 bytes
     uint32_t checksum;
 
     SystemProtocol(uint32_t userId,
-    bool side, bool padding,
+    bool side, uint8_t timeInForce,
     uint64_t price,
     int16_t quantity,
     int64_t timestamp,
@@ -83,7 +86,7 @@ struct SystemProtocol{ // 44 bytes
     uint32_t checksum) : 
         userId(userId),
         side(side),
-        padding(padding),
+        timeInForce(timeInForce),
         price(price),
         quantity(quantity),
         timestamp(timestamp),
@@ -98,7 +101,7 @@ struct SystemProtocol{ // 44 bytes
         std::memcpy(bytes.data(), &userId, sizeof(userId));
 
         bytes[4] = side ? 1 : 0;
-        bytes[5] = padding ? 1 : 0;
+        bytes[5] = timeInForce;
 
         std::memcpy(bytes.data() + 6, &price, sizeof(price));
         std::memcpy(bytes.data() + 14, &quantity, sizeof(quantity));
@@ -111,7 +114,7 @@ struct SystemProtocol{ // 44 bytes
     SystemProtocol() :
         userId(0),
         side(false),
-        padding(false),
+        timeInForce(static_cast<uint8_t>(TimeInForce::GTC)),
         price(0),
         quantity(0),
         timestamp(0),
@@ -123,7 +126,7 @@ struct SystemProtocol{ // 44 bytes
         SystemProtocol protocol;
         std::memcpy(&protocol.userId, bytes.data(), sizeof(protocol.userId));
         std::memcpy(&protocol.side, bytes.data() + 4, sizeof(protocol.side));
-        std::memcpy(&protocol.padding, bytes.data() + 5, sizeof(protocol.padding));
+        std::memcpy(&protocol.timeInForce, bytes.data() + 5, sizeof(protocol.timeInForce));
         std::memcpy(&protocol.price, bytes.data() + 6, sizeof(protocol.price));
         std::memcpy(&protocol.quantity, bytes.data() + 14, sizeof(protocol.quantity));
         std::memcpy(&protocol.timestamp, bytes.data() + 16, sizeof(protocol.timestamp));
@@ -150,7 +153,7 @@ struct BatchSystemProtocol{ // 1000 bytes
         batch[0] = static_cast<uint8_t>(++sz);
         std::memcpy(batch.data() + ind, &message.userId, sizeof(message.userId));
         std::memcpy(batch.data() + ind + 4, &message.side, sizeof(message.side));
-        std::memcpy(batch.data() + ind + 5, &message.padding, sizeof(message.padding));
+        std::memcpy(batch.data() + ind + 5, &message.timeInForce, sizeof(message.timeInForce));
         std::memcpy(batch.data() + ind + 6, &message.price, sizeof(message.price));
         std::memcpy(batch.data() + ind + 14, &message.quantity, sizeof(message.quantity));
         std::memcpy(batch.data() + ind + 16, &message.timestamp, sizeof(message.timestamp));
@@ -169,7 +172,7 @@ struct BatchSystemProtocol{ // 1000 bytes
         SystemProtocol message;
         std::memcpy(&message.userId, batch.data() + offset, sizeof(message.userId));
         std::memcpy(&message.side, batch.data() + offset + 4, sizeof(message.side));
-        std::memcpy(&message.padding, batch.data() + offset + 5, sizeof(message.padding));
+        std::memcpy(&message.timeInForce, batch.data() + offset + 5, sizeof(message.timeInForce));
         std::memcpy(&message.price, batch.data() + offset + 6, sizeof(message.price));
         std::memcpy(&message.quantity, batch.data() + offset + 14, sizeof(message.quantity));
         std::memcpy(&message.timestamp, batch.data() + offset + 16, sizeof(message.timestamp));
@@ -193,7 +196,7 @@ inline uint32_t calculateChecksum(const SystemProtocol& message) {
     
     sum += message.userId;
     sum += message.side ? 1 : 0;
-    sum += message.padding ? 1 : 0;
+    sum += message.timeInForce;
     sum += static_cast<uint32_t>(message.price & 0xFFFFFFFF);
     sum += static_cast<uint32_t>((message.price >> 32) & 0xFFFFFFFF);
     sum += static_cast<uint32_t>(message.quantity);
@@ -217,7 +220,7 @@ inline SystemProtocol translate(ClientProtocol message, int seq_number) {
     SystemProtocol dummy = SystemProtocol (
         message.userId,
         message.side,
-        message.padding,
+        message.timeInForce,
         message.price,
         message.quantity,
         message.timestamp,
@@ -229,7 +232,7 @@ inline SystemProtocol translate(ClientProtocol message, int seq_number) {
     return SystemProtocol (
         message.userId,
         message.side,
-        message.padding,
+        message.timeInForce,
         message.price,
         message.quantity,
         message.timestamp,

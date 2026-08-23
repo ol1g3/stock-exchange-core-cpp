@@ -27,7 +27,11 @@ std::vector<Event> FIFOStrategy::match(
                 int16_t minVal = std::min(order.quantity, cur.quantity);
                 
                 order.quantity -= minVal;
-                
+
+                events.push_back({order.timestamp, order.transaction_id,
+                    static_cast<uint8_t>(order.quantity > 0 ? OrderStatus::PartiallyFilled : OrderStatus::Filled),
+                    order.userId, it->first, minVal, order.side});
+
                 SystemProtocol updatedOrder = cur;
                 updatedOrder.quantity -= minVal;
 
@@ -45,11 +49,13 @@ std::vector<Event> FIFOStrategy::match(
             else it++;
         }
         if (order.quantity > 0) {
-            bids.try_emplace(order.price, levelType()).first->second.addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
-        }
-        else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
+            if (static_cast<TimeInForce>(order.timeInForce) == TimeInForce::IOC) {
+                events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Cancelled), order.userId, order.price, order.quantity, order.side});
+            }
+            else {
+                bids.try_emplace(order.price, levelType()).first->second.addOrder(order);
+                events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId, order.price, order.quantity, order.side});
+            }
         }
     }
     else {
@@ -64,7 +70,11 @@ std::vector<Event> FIFOStrategy::match(
                 int16_t minVal = std::min(order.quantity, cur.quantity);
 
                 order.quantity -= minVal;
-                
+
+                events.push_back({order.timestamp, order.transaction_id,
+                    static_cast<uint8_t>(order.quantity > 0 ? OrderStatus::PartiallyFilled : OrderStatus::Filled),
+                    order.userId, it->first, minVal, order.side});
+
                 SystemProtocol updatedOrder = cur;
                 updatedOrder.quantity -= minVal;
 
@@ -82,11 +92,13 @@ std::vector<Event> FIFOStrategy::match(
             else it++;
         }
         if (order.quantity > 0) {
-            asks.try_emplace(order.price, levelType()).first->second.addOrder(order);
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId});
-        }
-        else {
-            events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Filled), order.userId});
+            if (static_cast<TimeInForce>(order.timeInForce) == TimeInForce::IOC) {
+                events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Cancelled), order.userId, order.price, order.quantity, order.side});
+            }
+            else {
+                asks.try_emplace(order.price, levelType()).first->second.addOrder(order);
+                events.push_back({order.timestamp, order.transaction_id, static_cast<uint8_t>(OrderStatus::Added), order.userId, order.price, order.quantity, order.side});
+            }
         }
     }
     return events;
