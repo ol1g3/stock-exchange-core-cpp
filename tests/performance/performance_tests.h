@@ -33,6 +33,9 @@ private:
         std::chrono::duration<double> totalDuration
     );
 
+    PerformanceMetrics summarizeLatencies(std::vector<double> latenciesMicroseconds,
+                                          std::chrono::duration<double> totalDuration);
+
 public:
     PerformanceTests();
     
@@ -41,4 +44,7 @@ public:
     PerformanceMetrics testFifoStrategyPerformance();
     PerformanceMetrics testProRataStrategyPerformance();
     PerformanceMetrics testBatchProcessingEfficiency();
+    // Closed-loop round trip: Client::submit -> gateway batch -> order book -> event queue
+    // -> trade notification service -> Client::getNotification, one order in flight at a time.
+    PerformanceMetrics testRoundTripLatency(std::chrono::milliseconds batchInterval, size_t samples);
 };

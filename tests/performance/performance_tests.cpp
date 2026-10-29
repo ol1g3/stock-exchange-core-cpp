@@ -1,6 +1,8 @@
 #include "performance_tests.h"
 #include "../../include/core/fifo_strategy.h"
 #include "../../include/core/pro_rata_strategy.h"
+#include "../../include/services/trade_notification_service.h"
+#include "../../include/client/client.h"
 #include <algorithm>
 #include <numeric>
 #include <iostream>
@@ -263,4 +265,100 @@ PerformanceMetrics PerformanceTests::testBatchProcessingEfficiency() {
         0,
         std::chrono::duration<double>(duration).count()
     };
+}
+
+namespace {
+using SteadyClock = std::chrono::steady_clock;
+
+int64_t nowNs() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(SteadyClock::now().time_since_epoch()).count();
+}
+
+// Records when the exchange's response for its own order reaches the client.
+class ProbeClient : public Client {
+public:
+    std::atomic<int64_t> responseNs{0};
+
+    explicit ProbeClient(OrderEntryGateway& gateway) : Client(gateway) {}
+
+    bool sendIocBuy(uint64_t price) { return submit(true, price, 1, TimeInForce::IOC); }
+    bool sendGtcSell(uint64_t price) { return submit(false, price, 1, TimeInForce::GTC); }
+
+    bool createOrder() override { return false; }
+    void getNotification(const Event& event) override {
+        if (event.status == OrderStatus::Filled || event.status == OrderStatus::PartiallyFilled ||
+            event.status == OrderStatus::Cancelled) {
+            responseNs.store(nowNs(), std::memory_order_release);
+        }
+    }
+    void receiveQuoteUpdate(QuoteSummary) override {}
+};
+
+class QuietClient : public ProbeClient {
+public:
+    using ProbeClient::ProbeClient;
+    void getNotification(const Event&) override {}
+};
+}
+
+PerformanceMetrics PerformanceTests::summarizeLatencies(std::vector<double> latencies,
+                                                        std::chrono::duration<double> totalDuration) {
+    if (latencies.empty()) {
+        return PerformanceMetrics{0.0, 0.0, 0.0, 0.0, 0, 0, totalDuration.count()};
+    }
+    std::sort(latencies.begin(), latencies.end());
+    double avg = std::accumulate(latencies.begin(), latencies.end(), 0.0) / static_cast<double>(latencies.size());
+    return PerformanceMetrics{
+        static_cast<double>(latencies.size()) / totalDuration.count(),
+        avg,
+        latencies[static_cast<size_t>(static_cast<double>(latencies.size()) * 0.95)],
+        latencies[static_cast<size_t>(static_cast<double>(latencies.size()) * 0.99)],
+        latencies.size(),
+        0,
+        totalDuration.count()
+    };
+}
+
+PerformanceMetrics PerformanceTests::testRoundTripLatency(std::chrono::milliseconds batchInterval, size_t samples) {
+    std::cout << "Starting round-trip latency test (batch interval " << batchInterval.count()
+              << " ms, " << samples << " samples)..." << std::endl;
+
+    EventQueue eventQueue;
+    OrderBookPool orderBookPool(1, eventQueue);
+    OrderEntryGateway gateway(orderBookPool, batchInterval);
+    TradeNotificationService notifications;
+    notifications.setEventQueue(&eventQueue);
+
+    ProbeClient probe(gateway);
+    QuietClient seller(gateway);
+    notifications.addClient(&probe);
+    notifications.addClient(&seller);
+
+    gateway.start();
+    notifications.start();
+
+    const uint64_t price = 10000;
+    std::vector<double> latencies;
+    latencies.reserve(samples);
+
+    auto testStart = SteadyClock::now();
+    for (size_t i = 0; i < samples; ++i) {
+        // untimed liquidity so the timed IOC buy always crosses and fills
+        seller.sendGtcSell(price);
+
+        probe.responseNs.store(0, std::memory_order_relaxed);
+        int64_t t0 = nowNs();
+        probe.sendIocBuy(price);
+        int64_t t1;
+        while ((t1 = probe.responseNs.load(std::memory_order_acquire)) == 0) {
+            std::this_thread::yield();
+        }
+        latencies.push_back(static_cast<double>(t1 - t0) / 1000.0);
+    }
+    auto testEnd = SteadyClock::now();
+
+    gateway.stop();
+    notifications.stop();
+
+    return summarizeLatencies(std::move(latencies), testEnd - testStart);
 }

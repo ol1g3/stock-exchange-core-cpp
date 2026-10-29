@@ -5,20 +5,24 @@
 #include "../core/order_book.h"
 #include <thread>
 #include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 class OrderEntryGateway : public ServiceInterface {
 private:
-    bool running;
+    std::atomic<bool> running;
     OrderBookPool& orderBookPool;
     BatchSystemProtocol batch;
-    std::chrono::milliseconds batchInterval = std::chrono::milliseconds(2000);
+    std::chrono::milliseconds batchInterval;
     std::mutex batchMutex;
+    std::condition_variable batchCv;
     std::thread batchThread;
 
     bool run();
 
 public:
-    OrderEntryGateway(OrderBookPool& orderBookPool);
+    OrderEntryGateway(OrderBookPool& orderBookPool,
+                      std::chrono::milliseconds batchInterval = std::chrono::milliseconds(2000));
     bool acceptOrder(const ClientProtocol& message);
 
     ServiceType initialize();

@@ -45,6 +45,8 @@ Modern financial exchanges need to process hundreds of thousands of orders per s
 
 6. **Event-Driven Architecture**: The [`EventQueue`](include/queue/event_queue.h) decouples order processing from client notifications, allowing for asynchronous trade reporting without blocking the matching engine.
 
+7. **Condition-Variable Hot Path**: Neither the [`OrderEntryGateway`](src/services/order_entry_gateway.cpp) batch thread nor the [`TradeNotificationService`](src/services/trade_notification_service.cpp) sleeps on a fixed timer. `acceptOrder` and `EventQueue::push` signal a condition variable, so a batch is flushed the moment an order arrives and a notification is dispatched the moment an event is queued. Under load, orders still accumulate in the batch while a flush is running, so batching happens naturally. `batchInterval` (default 2000 ms) is now only the upper bound on how long the gateway thread idles; use a value of at least 1 ms, since 0 makes the thread spin.
+
 ### 🚀 Matching Strategies
 
 The system supports pluggable matching algorithms:
@@ -125,9 +127,9 @@ docker run --rm stock-exchange-core ./bin/perf_tests # to run performance tests
 ```
 Initializing exchange...
 Running 50 rounds: 4 noise traders + 1 market maker at reference price 10000
-Batch full (22 orders), processing
-... (9 batches)
-Processing final batch of 22 orders before shutdown
+Processing batch of 6 orders (periodic)
+Processing batch of 3 orders (periodic)
+... (one line per flush)
 
 === Simulation complete ===
 NoiseTrader 1: sent 50, fills 21, shares 299, position -103, IOC cancelled 714
@@ -158,3 +160,15 @@ P99 Latency: 59.00 μs
 ```
 
 These figures measure [`OrderEntryGateway::acceptOrder`](src/services/order_entry_gateway.cpp) — the time to accept an order into the current batch, including the matching work that runs whenever a batch fills. They are not order-to-trade latency. The harness also truncates each sample to whole microseconds, so the many samples below 1 µs report as 0, which is why P95 reads 0.00 while the tail is still visible at P99.
+
+### Round-trip latency
+
+`./bin/perf_tests --roundtrip [batchIntervalMs] [samples]` times one order at a time from `Client::submit` until the fill reaches that client's `getNotification`, covering the gateway, order book, event queue and notification service. It uses `steady_clock` with nanosecond resolution. Run one configuration per process, because the gateway's sequence counter is process-wide.
+
+Measured on Darwin arm64, Apple clang 17, 5000 samples:
+
+| | Avg | P95 | P99 |
+|---|---|---|---|
+| Sleep-based gateway and notification polling (2000 ms interval, 10 samples) | 2,002,358 μs | 2,005,688 μs | 2,005,688 μs |
+| Sleep-based, 1 ms interval | 1,369 μs | 2,506 μs | 2,529 μs |
+| Condition variables, default interval | 17.6 μs | 38.0 μs | 46.5 μs |

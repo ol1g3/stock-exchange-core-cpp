@@ -18,6 +18,16 @@ void printMetrics(const std::string& testName, const PerformanceMetrics& metrics
 
 int main(int argc, char* argv[]) {
     PerformanceTests tests;
+
+    // --roundtrip [batchIntervalMs] [samples]: one config per process, because the gateway's
+    // sequence counter is process-wide and a fresh order book expects it to start at 1.
+    if (argc > 1 && std::string(argv[1]) == "--roundtrip") {
+        long intervalMs = argc > 2 ? std::stol(argv[2]) : 2000;
+        size_t samples = argc > 3 ? static_cast<size_t>(std::stol(argv[3])) : 10;
+        auto metrics = tests.testRoundTripLatency(std::chrono::milliseconds(intervalMs), samples);
+        printMetrics("Round Trip (submit -> client notification)", metrics);
+        return 0;
+    }
     bool perfOnly = (argc > 1 && std::string(argv[1]) == "--perf-only");
     
     std::cout << "Stock Exchange Performance Tests" << std::endl;

@@ -32,6 +32,7 @@ bool TradeNotificationService::start() {
 
 bool TradeNotificationService::stop() {
     running = false;
+    if (queue) queue->wake();
     if (processingThread.joinable()) {
         processingThread.join();
     }
@@ -58,11 +59,12 @@ bool TradeNotificationService::isRunning() {
 bool TradeNotificationService::run() {
     while (running) {
         if (queue) {
-            while (std::optional<Event> event = queue->poll()) {
+            if (std::optional<Event> event = queue->pollWait(std::chrono::milliseconds(50))) {
                 dispatch(*event);
             }
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return true;
 }

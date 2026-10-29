@@ -4,8 +4,8 @@
 #include <thread>
 #include <chrono>
 
-OrderEntryGateway::OrderEntryGateway(OrderBookPool& pool) 
-    : running(false), orderBookPool(pool) {}
+OrderEntryGateway::OrderEntryGateway(OrderBookPool& pool, std::chrono::milliseconds interval)
+    : running(false), orderBookPool(pool), batchInterval(interval) {}
 
 bool OrderEntryGateway::start() {
     if(running) {
@@ -23,16 +23,16 @@ bool OrderEntryGateway::stop() {
         return true;
     }
     
-    running = false;
-    
     {
         std::lock_guard<std::mutex> lock(batchMutex);
+        running = false;
         if(batch.batch[0] > 0) {
             std::cout << "Processing final batch of " << (int)batch.batch[0] << " orders before shutdown" << std::endl;
             orderBookPool.process(batch);
         }
     }
     
+    batchCv.notify_all();
     if(batchThread.joinable()) {
         batchThread.join();
     }
@@ -74,14 +74,16 @@ bool OrderEntryGateway::acceptOrder(const ClientProtocol& order) {
             return false;
         }
     }
+    batchCv.notify_one();
     return true;
 }
 
 bool OrderEntryGateway::run() {
     while(running) {
-        std::this_thread::sleep_for(batchInterval);
+        std::unique_lock<std::mutex> lock(batchMutex);
+        // flush as soon as an order arrives; batchInterval only bounds how long we idle
+        batchCv.wait_for(lock, batchInterval, [this] { return !running || batch.batch[0] > 0; });
         if(!running) break;
-        std::lock_guard<std::mutex> lock(batchMutex);
         
         if(batch.batch[0] > 0) {
             std::cout << "Processing batch of " << (int)batch.batch[0] << " orders (periodic)" << std::endl;
